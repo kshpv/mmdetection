@@ -90,8 +90,6 @@ class SingleRoIExtractor(nn.Module):
 
     @force_fp32(apply_to=('feats', ), out_fp16=True)
     def forward(self, feats, rois, roi_scale_factor=None):
-        from torch.onnx import operators
-
         if len(feats) == 1:
             return self.roi_layers[0](feats[0], rois)
 
@@ -100,21 +98,15 @@ class SingleRoIExtractor(nn.Module):
         if roi_scale_factor is not None:
             rois = self.roi_rescale(rois, roi_scale_factor)
 
-        indices = []
         roi_feats = []
         for level, (feat, extractor) in enumerate(zip(feats, self.roi_layers)):
-            # Explicit casting to int is required for ONNXRuntime.
-            level_indices = torch.nonzero(
-                (target_lvls == level).int()).view(-1)
-            level_rois = rois[level_indices]
-            indices.append(level_indices)
-
+            mask = target_lvls == level
+            # Set all ROIs from other levels to nought.
+            # This could enable optimizations at ROIs' features extractor level.
+            level_rois = rois * mask.type_as(rois).unsqueeze(-1)
             level_feats = extractor(feat, level_rois)
+            # Zero out features from out of level ROIs.
+            level_feats = level_feats * mask.type_as(level_feats).view(-1, 1, 1, 1)
             roi_feats.append(level_feats)
-        # Concatenate roi features from different pyramid levels
-        # and rearrange them to match original ROIs order.
-        indices = torch.cat(indices, dim=0)
-        k = operators.shape_as_tensor(indices)
-        _, indices = topk(indices, k, dim=0, largest=False)
-        roi_feats = torch.cat(roi_feats, dim=0)[indices]
+        roi_feats = sum(roi_feats)
         return roi_feats
