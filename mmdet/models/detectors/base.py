@@ -90,6 +90,8 @@ class BaseDetector(nn.Module, metaclass=ABCMeta):
             if not isinstance(var, list):
                 raise TypeError(f'{name} must be a list, but got {type(var)}')
 
+        if 'dummy_forward' in kwargs:
+            return self.forward_dummy(imgs[0])
         num_augs = len(img)
         if num_augs != len(img_metas):
             raise ValueError(f'num of augmentations ({len(img)}) '
@@ -140,8 +142,12 @@ class BaseDetector(nn.Module, metaclass=ABCMeta):
             assert 'proposals' not in kwargs
             return self.aug_test(imgs, img_metas, **kwargs)
 
-    @auto_fp16(apply_to=('img', ))
-    def forward(self, img, img_metas, return_loss=True, **kwargs):
+    @abstractmethod
+    def forward_dummy(self, img, **kwargs):
+        pass
+
+    @auto_fp16(apply_to=('img',))
+    def forward(self, img, img_metas=[], return_loss=True, **kwargs):
         """
         Calls either forward_train or forward_test depending on whether
         return_loss=True. Note this setting will change the expected inputs.
@@ -154,7 +160,6 @@ class BaseDetector(nn.Module, metaclass=ABCMeta):
             return self.forward_train(img, img_metas, **kwargs)
         else:
             return self.forward_test(img, img_metas, **kwargs)
-
 
     def forward_export(self, imgs):
         from torch.onnx.operators import shape_as_tensor
@@ -206,7 +211,7 @@ class BaseDetector(nn.Module, metaclass=ABCMeta):
 
         return loss, log_vars
 
-    def train_step(self, data, optimizer):
+    def train_step(self, data, optimizer, compression_ctrl=None):
         """The iteration step during training.
 
         This method defines an iteration step during training, except for the
@@ -235,6 +240,10 @@ class BaseDetector(nn.Module, metaclass=ABCMeta):
         losses = self(**data)
         loss, log_vars = self._parse_losses(losses)
 
+        if compression_ctrl is not None:
+            compression_loss = compression_ctrl.loss()
+            loss += compression_loss
+
         outputs = dict(
             loss=loss, log_vars=log_vars, num_samples=len(data['img_metas']))
 
@@ -254,7 +263,6 @@ class BaseDetector(nn.Module, metaclass=ABCMeta):
             loss=loss, log_vars=log_vars, num_samples=len(data['img_metas']))
 
         return outputs
-
 
     def show_result(self,
                     img,

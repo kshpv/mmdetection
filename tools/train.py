@@ -208,6 +208,12 @@ def main():
     logger.info(f'Distributed training: {distributed}')
     logger.info(f'Config:\n{cfg.pretty_text}')
 
+    if 'nncf_config' in cfg:
+        logger.info('NNCF config: {}'.format(cfg.nncf_config))
+        cfg.ENABLE_COMPRESSION = True
+    else:
+        cfg.ENABLE_COMPRESSION = False
+
     # set random seeds
     if args.seed is not None:
         logger.info(f'Set random seed to {args.seed}, '

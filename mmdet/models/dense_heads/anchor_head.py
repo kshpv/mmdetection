@@ -1,6 +1,7 @@
 import torch
 import torch.nn as nn
 from mmcv.cnn import normal_init
+from nncf.dynamic_graph.context import no_nncf_trace
 
 from mmdet.core import (anchor_inside_flags, build_anchor_generator,
                         build_assigner, build_bbox_coder, build_sampler,
