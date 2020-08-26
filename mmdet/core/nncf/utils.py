@@ -19,9 +19,7 @@ def wrap_nncf_model(model, cfg, data_loader_for_init=None):
 
         nncf_config.register_extra_structs([QuantizationRangeInitArgs(wrapped_loader)])
 
-    input_size = nncf_config.get(
-        'input_sample_size', (1, 3, cfg.input_size, cfg.input_size)
-    )
+    input_size = nncf_config.get("input_info").get('sample_size')
 
     def dummy_forward(model):
         device = next(model.parameters()).device

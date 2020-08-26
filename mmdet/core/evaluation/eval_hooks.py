@@ -27,6 +27,13 @@ class EvalHook(Hook):
         results = single_gpu_test(runner.model, self.dataloader, show=False)
         self.evaluate(runner, results)
 
+    def before_train_epoch(self, runner):
+        if not self.every_n_epochs(runner, self.interval):
+            return
+        from mmdet.apis import single_gpu_test
+        results = single_gpu_test(runner.model, self.dataloader, show=False)
+        self.evaluate(runner, results)
+
     def evaluate(self, runner, results):
         eval_res = self.dataloader.dataset.evaluate(
             results, logger=runner.logger, **self.eval_kwargs)

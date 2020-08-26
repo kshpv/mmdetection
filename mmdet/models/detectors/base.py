@@ -15,6 +15,7 @@ from mmcv.utils import print_log
 from mmdet.core import auto_fp16
 from mmdet.utils import get_root_logger
 
+from nncf.dynamic_graph.context import no_nncf_trace
 
 class BaseDetector(nn.Module, metaclass=ABCMeta):
     """Base class for detectors"""
@@ -90,8 +91,6 @@ class BaseDetector(nn.Module, metaclass=ABCMeta):
             if not isinstance(var, list):
                 raise TypeError(f'{name} must be a list, but got {type(var)}')
 
-        if 'dummy_forward' in kwargs:
-            return self.forward_dummy(imgs[0])
         num_augs = len(img)
         if num_augs != len(img_metas):
             raise ValueError(f'num of augmentations ({len(img)}) '
@@ -119,6 +118,9 @@ class BaseDetector(nn.Module, metaclass=ABCMeta):
             if not isinstance(var, list):
                 raise TypeError(f'{name} must be a list, but got {type(var)}')
 
+        if 'dummy_forward' in kwargs:
+            return self.forward_dummy(imgs[0])
+
         num_augs = len(imgs)
         if num_augs != len(img_metas):
             raise ValueError(f'num of augmentations ({len(imgs)}) '
@@ -136,7 +138,8 @@ class BaseDetector(nn.Module, metaclass=ABCMeta):
             """
             if 'proposals' in kwargs:
                 kwargs['proposals'] = kwargs['proposals'][0]
-            return self.simple_test(imgs[0], img_metas[0], **kwargs)
+            with no_nncf_trace():
+                return self.simple_test(imgs[0], img_metas[0], **kwargs)
         else:
             # TODO: support test augmentation for predefined proposals
             assert 'proposals' not in kwargs

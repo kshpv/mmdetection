@@ -84,13 +84,13 @@ def train_detector(model,
     if cfg.load_from:
         load_checkpoint(model=model, filename=cfg.load_from)
         # put model on gpus
-        model = model.cuda()
-        # nncf model wrapper
-        if cfg.ENABLE_COMPRESSION:
-            model, compression_ctrl = wrap_nncf_model(model, cfg, data_loaders[0])
-            print(*get_all_modules(model).keys(), sep="\n")
-        else:
-            compression_ctrl = None
+    model = model.cuda()
+    # nncf model wrapper
+    if cfg.ENABLE_COMPRESSION:
+        model, compression_ctrl = wrap_nncf_model(model, cfg, data_loaders[0])
+        print(*get_all_modules(model).keys(), sep="\n")
+    else:
+        compression_ctrl = None
 
     map_location = 'default'
     if torch.cuda.is_available():
