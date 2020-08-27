@@ -121,7 +121,7 @@ data = dict(
         pipeline=test_pipeline)
 )
 # optimizer
-optimizer = dict(type='SGD', lr=0.05, momentum=0.9, weight_decay=0.0005)
+optimizer = dict(type='SGD', lr=0.005, momentum=0.9, weight_decay=0.0005)
 optimizer_config = dict()
 # learning policy
 lr_config = dict(
@@ -144,7 +144,7 @@ total_epochs = 70
 dist_params = dict(backend='nccl')
 log_level = 'INFO'
 work_dir = 'outputs/face-detection-0200'
-load_from = None
+
 resume_from = None
 workflow = [('train', 1)]
 

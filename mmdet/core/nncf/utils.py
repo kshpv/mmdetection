@@ -7,7 +7,7 @@ from nncf.structures import QuantizationRangeInitArgs
 
 from nncf import NNCFConfig
 from nncf import load_state
-from nncf import create_compressed_model
+from nncf import create_compressed_model, register_default_init_args
 
 
 def wrap_nncf_model(model, cfg, data_loader_for_init=None):
@@ -17,20 +17,26 @@ def wrap_nncf_model(model, cfg, data_loader_for_init=None):
     if data_loader_for_init is not None:
         wrapped_loader = MMInitializeDataLoader(data_loader_for_init)
 
-        nncf_config.register_extra_structs([QuantizationRangeInitArgs(wrapped_loader)])
+        # TODO: [NNCF] need check the arguments in register_default_init_args()
+        # TODO: add loss factory that reads config file, creates them and passes to register_default_init_args()
+        nncf_config = register_default_init_args(nncf_config, torch.sum(model.bbox_head.loss["loss_cls"], model.bbox_head.loss["loss_bbox"]), wrapped_loader)
+
+        #nncf_config.register_extra_structs([QuantizationRangeInitArgs(wrapped_loader)])
 
     input_size = nncf_config.get("input_info").get('sample_size')
 
+    print(f"model.bbox_head = {model.bbox_head}")
+
     def dummy_forward(model):
         device = next(model.parameters()).device
-        input_args = ([torch.randn(input_size).to(device),],)
+        input_args = ([torch.randn(input_size).to(device), ],)
         input_kwargs = dict(return_loss=False, dummy_forward=True)
         model(*input_args, **input_kwargs)
-
+        
     model.dummy_forward_fn = dummy_forward
-    compression_ctrl, model = create_compressed_model(
-        model, nncf_config, dummy_forward_fn=dummy_forward
-    )
+
+
+    compression_ctrl, model = create_compressed_model(model, nncf_config, dummy_forward_fn=dummy_forward)
     return model, compression_ctrl
 
 
@@ -67,4 +73,6 @@ class MMInitializeDataLoader(InitializingDataLoader):
         kwargs = {k: v.data[0] for k, v in dataloader_output.items()}
         return (), kwargs
 
-    # get_targets TBD
+    # TODO: not tested; need to test
+    def get_target(self, dataloader_output):
+        return dataloader_output["gt_bboxes"], dataloader_output["gt_labels"] 

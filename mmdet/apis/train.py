@@ -161,12 +161,9 @@ def train_detector(model,
         eval_hook = DistEvalHook if distributed else EvalHook
         runner.register_hook(eval_hook(val_dataloader, **eval_cfg))
 
-    if cfg.ENABLE_COMPRESSION:
-        runner.register_hook(CompressionHook(compression_ctrl=compression_ctrl))
-
     if cfg.resume_from:
         runner.resume(cfg.resume_from, map_location=map_location)
-    # elif cfg.load_from:
-    #     runner.load_checkpoint(cfg.load_from)
-    # runner.run(data_loaders, cfg.workflow, cfg.total_epochs)
+    elif cfg.load_from:
+        runner.load_checkpoint(cfg.load_from)
+
     runner.run(data_loaders, cfg.workflow, cfg.total_epochs, compression_ctrl=compression_ctrl)
