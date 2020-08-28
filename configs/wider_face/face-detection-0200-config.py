@@ -91,7 +91,7 @@ test_pipeline = [
         ])
 ]
 data = dict(
-    samples_per_gpu=65,
+    samples_per_gpu=32,
     workers_per_gpu=2,
     train=dict(
         type='RepeatDataset',
@@ -151,6 +151,8 @@ workflow = [('train', 1)]
 #load_from = "https://download.01.org/opencv/openvino_training_extensions/models/object_detection/v2/face-detection-0200.pth"
 #load_from = "outputs/face-detection-0200/epoch_8.pth"
 load_from = None
+
+find_unused_parameters = True
 
 nncf_config = {
     "input_info": {

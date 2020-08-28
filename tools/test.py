@@ -129,13 +129,13 @@ def main():
         if args.fuse_conv_bn:
             model = fuse_module(model)
 
+
         # old versions did not save class info in checkpoints, this walkaround is
         # for backward compatibility
         if 'CLASSES' in checkpoint['meta']:
             model.CLASSES = checkpoint['meta']['CLASSES']
         else:
             model.CLASSES = dataset.CLASSES
-
 
     if torch.cuda.is_available():
         if not distributed:
@@ -153,7 +153,7 @@ def main():
         model = MMDataCPU(model)
         outputs = single_gpu_test(model, data_loader, args.show, args.show_dir,
                                   args.show_score_thr)
-    
+
     rank, _ = get_dist_info()
     if rank == 0:
         if args.out:
