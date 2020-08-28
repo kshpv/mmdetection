@@ -1,6 +1,7 @@
 from texttable import Texttable
 from mmcv.runner.hooks.hook import Hook
 
+from nncf.nncf_logger import logger
 
 class CompressionHook(Hook):
     def __init__(self, compression_ctrl=None):
@@ -14,6 +15,9 @@ class CompressionHook(Hook):
 
     def before_run(self, runner):
         runner.logger.info(print_statistics(self.compression_ctrl.statistics()))
+
+    def after_run(self, runner):
+        self.compression_ctrl.export_model("compressed_model.onnx")
 
 
 def print_statistics(stats):

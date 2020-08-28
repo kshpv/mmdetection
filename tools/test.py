@@ -15,6 +15,7 @@ from mmdet.models import build_detector
 from mmdet.utils import ExtendedDictAction
 from mmdet.parallel import MMDataCPU
 
+from mmdet.core.nncf import wrap_nncf_model
 
 def parse_args():
     parser = argparse.ArgumentParser(
@@ -115,18 +116,26 @@ def main():
 
     # build the model and load checkpoint
     model = build_detector(cfg.model, train_cfg=None, test_cfg=cfg.test_cfg)
-    fp16_cfg = cfg.get('fp16', None)
-    if fp16_cfg is not None:
-        wrap_fp16_model(model)
-    checkpoint = load_checkpoint(model, args.checkpoint, map_location='cpu')
-    if args.fuse_conv_bn:
-        model = fuse_module(model)
-    # old versions did not save class info in checkpoints, this walkaround is
-    # for backward compatibility
-    if 'CLASSES' in checkpoint['meta']:
-        model.CLASSES = checkpoint['meta']['CLASSES']
+
+
+    # nncf model wrapper
+    if 'nncf_config' in cfg:
+        _, model = wrap_nncf_model(model, cfg, None, args.checkpoint)
     else:
-        model.CLASSES = dataset.CLASSES
+        fp16_cfg = cfg.get('fp16', None)
+        if fp16_cfg is not None:
+            wrap_fp16_model(model)
+        checkpoint = load_checkpoint(model, args.checkpoint, map_location='cpu')
+        if args.fuse_conv_bn:
+            model = fuse_module(model)
+
+        # old versions did not save class info in checkpoints, this walkaround is
+        # for backward compatibility
+        if 'CLASSES' in checkpoint['meta']:
+            model.CLASSES = checkpoint['meta']['CLASSES']
+        else:
+            model.CLASSES = dataset.CLASSES
+
 
     if torch.cuda.is_available():
         if not distributed:
@@ -144,7 +153,7 @@ def main():
         model = MMDataCPU(model)
         outputs = single_gpu_test(model, data_loader, args.show, args.show_dir,
                                   args.show_score_thr)
-
+    
     rank, _ = get_dist_info()
     if rank == 0:
         if args.out:

@@ -83,11 +83,14 @@ def train_detector(model,
 
     if cfg.load_from:
         load_checkpoint(model=model, filename=cfg.load_from)
-        # put model on gpus
-    model = model.cuda()
+
+    # put model on gpus
+    if torch.cuda.is_available():
+        model = model.cuda()
+
     # nncf model wrapper
     if cfg.ENABLE_COMPRESSION:
-        model, compression_ctrl = wrap_nncf_model(model, cfg, data_loaders[0])
+        compression_ctrl, model = wrap_nncf_model(model, cfg, data_loaders[0])
         print(*get_all_modules(model).keys(), sep="\n")
     else:
         compression_ctrl = None
@@ -142,8 +145,7 @@ def train_detector(model,
     if distributed:
         runner.register_hook(DistSamplerSeedHook())
 
-    if cfg.ENABLE_COMPRESSION:
-        runner.register_hook(CompressionHook(compression_ctrl=compression_ctrl))
+
 
     add_logging_on_first_and_last_iter(runner)
 
@@ -152,7 +154,7 @@ def train_detector(model,
         val_dataset = build_dataset(cfg.data.val, dict(test_mode=True))
         val_dataloader = build_dataloader(
             val_dataset,
-            samples_per_gpu=1,
+            samples_per_gpu=8,
             workers_per_gpu=cfg.data.workers_per_gpu,
             dist=distributed,
             shuffle=False)
@@ -161,9 +163,10 @@ def train_detector(model,
         eval_hook = DistEvalHook if distributed else EvalHook
         runner.register_hook(eval_hook(val_dataloader, **eval_cfg))
 
+    if cfg.ENABLE_COMPRESSION:
+        runner.register_hook(CompressionHook(compression_ctrl=compression_ctrl))
+
     if cfg.resume_from:
         runner.resume(cfg.resume_from, map_location=map_location)
-    elif cfg.load_from:
-        runner.load_checkpoint(cfg.load_from)
 
     runner.run(data_loaders, cfg.workflow, cfg.total_epochs, compression_ctrl=compression_ctrl)

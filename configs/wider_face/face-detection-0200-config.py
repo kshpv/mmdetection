@@ -56,7 +56,7 @@ test_cfg = dict(
 # model training and testing settings
 # dataset settings
 dataset_type = 'CocoDataset'
-data_root = 'data/WIDERFace'
+data_root = '/home/aleksei/mmdetection/data/WIDERFace'
 img_norm_cfg = dict(mean=[0, 0, 0], std=[255, 255, 255], to_rgb=True)
 train_pipeline = [
     dict(type='LoadImageFromFile', to_float32=True),
@@ -121,7 +121,7 @@ data = dict(
         pipeline=test_pipeline)
 )
 # optimizer
-optimizer = dict(type='SGD', lr=0.005, momentum=0.9, weight_decay=0.0005)
+optimizer = dict(type='SGD', lr=0.0005, momentum=0.9, weight_decay=0.0005)
 optimizer_config = dict()
 # learning policy
 lr_config = dict(
@@ -148,13 +148,16 @@ work_dir = 'outputs/face-detection-0200'
 resume_from = None
 workflow = [('train', 1)]
 
-load_from = "https://download.01.org/opencv/openvino_training_extensions/models/object_detection/v2/face-detection-0200.pth"
+#load_from = "https://download.01.org/opencv/openvino_training_extensions/models/object_detection/v2/face-detection-0200.pth"
+#load_from = "outputs/face-detection-0200/epoch_8.pth"
+load_from = None
 
 nncf_config = {
     "input_info": {
         "sample_size": [1, 3, 256, 256]
     },
-    "compression": {
+    "compression": [
+            {
         "algorithm": "quantization",
         "initializer": {
             "range": {
@@ -164,8 +167,11 @@ nncf_config = {
                 "num_bn_adaptation_steps": 30,
             }
 
-        }
-    },
+                }
+            },
+           
+
+    ],
     "log_dir": work_dir
 }
 
