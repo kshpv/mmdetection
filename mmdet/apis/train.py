@@ -81,6 +81,7 @@ def train_detector(model,
             seed=cfg.seed) for ds in dataset
     ]
 
+    # TODO: Do we need that?
     if cfg.load_from:
         load_checkpoint(model=model, filename=cfg.load_from)
 
@@ -164,7 +165,7 @@ def train_detector(model,
         runner.register_hook(eval_hook(val_dataloader, **eval_cfg))
 
     if cfg.ENABLE_COMPRESSION:
-        runner.register_hook(CompressionHook(compression_ctrl=compression_ctrl))
+        runner.register_hook(CompressionHook(compression_ctrl=compression_ctrl, cfg=cfg))
 
     if cfg.resume_from:
         runner.resume(cfg.resume_from, map_location=map_location)

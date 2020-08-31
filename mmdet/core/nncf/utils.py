@@ -20,6 +20,7 @@ def wrap_nncf_model(model, cfg, data_loader_for_init=None, checkpoint=None):
         # TODO: add loss factory that reads config file, creates them and passes to register_default_init_args()
         nncf_config.register_extra_structs([QuantizationRangeInitArgs(wrapped_loader)])
 
+    # TODO: maybe load the model second time
     if  checkpoint:
         resuming_state_dict = load_checkpoint(model, cfg.load_from)
     else:
