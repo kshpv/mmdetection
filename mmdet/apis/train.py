@@ -11,9 +11,7 @@ from mmdet.datasets import build_dataloader, build_dataset
 from mmdet.utils import get_root_logger
 from mmdet.parallel import MMDataCPU
 
-from nncf.utils import get_all_modules
 from mmdet.core.nncf import wrap_nncf_model
-
 
 def set_random_seed(seed, deterministic=False):
     """Set random seed.
@@ -92,7 +90,6 @@ def train_detector(model,
     # nncf model wrapper
     if cfg.ENABLE_COMPRESSION:
         compression_ctrl, model = wrap_nncf_model(model, cfg, data_loaders[0])
-        print(*get_all_modules(model).keys(), sep="\n")
     else:
         compression_ctrl = None
 

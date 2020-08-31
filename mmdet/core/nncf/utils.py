@@ -8,7 +8,25 @@ from nncf.structures import QuantizationRangeInitArgs
 from nncf import NNCFConfig
 from nncf import load_state
 from nncf import create_compressed_model, register_default_init_args
+from nncf.utils import get_all_modules
 
+def is_nncf_enabled():
+    try:
+        import nncf
+        _is_nncf_enabled = True
+    except:
+        _is_nncf_enabled = False
+    try:
+        from nncf.initialization import InitializingDataLoader
+        from nncf.structures import QuantizationRangeInitArgs
+
+        from nncf import NNCFConfig
+        from nncf import load_state
+        from nncf import create_compressed_model, register_default_init_args
+    except:
+        raise RuntimeError("Incompatible version of NNCF")
+
+    return _is_nncf_enabled
 
 def wrap_nncf_model(model, cfg, data_loader_for_init=None, checkpoint=None):
     pathlib.Path(cfg.work_dir).mkdir(parents=True, exist_ok=True)
@@ -32,10 +50,11 @@ def wrap_nncf_model(model, cfg, data_loader_for_init=None, checkpoint=None):
         input_args = ([torch.randn(input_size).to(device), ],)
         input_kwargs = dict(return_loss=False, dummy_forward=True)
         model(*input_args, **input_kwargs)
-        
+    
     model.dummy_forward_fn = dummy_forward
 
     compression_ctrl, model = create_compressed_model(model, nncf_config, dummy_forward_fn=dummy_forward, resuming_state_dict=resuming_state_dict)
+    print(*get_all_modules(model).keys(), sep="\n")
     return compression_ctrl, model
 
 

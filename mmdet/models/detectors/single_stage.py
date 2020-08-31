@@ -2,8 +2,6 @@ import numpy as np
 import torch
 import torch.nn as nn
 
-from nncf.dynamic_graph.context import no_nncf_trace
-
 from mmdet.core import bbox2result
 from ..builder import DETECTORS, build_backbone, build_head, build_neck
 from .base import BaseDetector

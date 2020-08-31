@@ -15,7 +15,7 @@ from mmdet.models import build_detector
 from mmdet.utils import ExtendedDictAction
 from mmdet.parallel import MMDataCPU
 
-from mmdet.core.nncf import wrap_nncf_model
+from mmdet.core.nncf import wrap_nncf_model, is_nncf_enabled
 
 def parse_args():
     parser = argparse.ArgumentParser(
@@ -120,7 +120,9 @@ def main():
 
     # nncf model wrapper
     if 'nncf_config' in cfg:
-        _, model = wrap_nncf_model(model, cfg, None, args.checkpoint)
+        if is_nncf_enabled():
+            print (f"args.checkpoint = {args.checkpoint}")
+            _, model = wrap_nncf_model(model, cfg, None, args.checkpoint)
     else:
         fp16_cfg = cfg.get('fp16', None)
         if fp16_cfg is not None:
