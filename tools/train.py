@@ -22,7 +22,7 @@ from mmdet.datasets.pipelines import Compose
 from mmdet.models import build_detector, TwoStageDetector
 from mmdet.utils import collect_env, get_root_logger, ExtendedDictAction
 
-from mmdet.core.nncf import is_nncf_enabled
+from mmdet.core.nncf import check_nncf_is_enabled
 
 
 def parse_args():
@@ -211,9 +211,9 @@ def main():
     logger.info(f'Config:\n{cfg.pretty_text}')
 
     if 'nncf_config' in cfg:
-        if is_nncf_enabled():
-            logger.info('NNCF config: {}'.format(cfg.nncf_config))
-            cfg.ENABLE_COMPRESSION = True
+        check_nncf_is_enabled()
+        logger.info('NNCF config: {}'.format(cfg.nncf_config))
+        cfg.ENABLE_COMPRESSION = True
     else:
         cfg.ENABLE_COMPRESSION = False
 

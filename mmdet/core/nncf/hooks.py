@@ -9,7 +9,7 @@ class CompressionHook(Hook):
         from nncf import NNCFConfig
 
         self.compression_ctrl = compression_ctrl
-        self.nncf_config = NNCFConfig(cfg)
+        self.nncf_config = NNCFConfig(cfg.nncf_config)
 
     def after_train_iter(self, runner):
         self.compression_ctrl.scheduler.step()
@@ -22,11 +22,11 @@ class CompressionHook(Hook):
 
     def after_run(self, runner):
         input_size = self.nncf_config.get("input_info").get('sample_size')
-        device = next(compression_ctrl._model.parameters()).device
+        device = "cpu"
         input_args = ([torch.randn(input_size).to(device), ],)
         input_kwargs = dict(return_loss=False, dummy_forward=True)
 
-        self.logger.info("Exporting the model to ONXX format")
+        runner.logger.info("Exporting the model to ONXX format")
         self.compression_ctrl.export_model("compressed_model.onnx", *input_args, **input_kwargs)
 
 

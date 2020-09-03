@@ -1,24 +1,27 @@
 import pathlib
 from collections import OrderedDict
+from contextlib import contextmanager
 
 import torch
 
+try:
+    import nncf
 
-# from nncf.initialization import InitializingDataLoader
-# from nncf.structures import QuantizationRangeInitArgs
-#
-# from nncf import NNCFConfig
-# from nncf import load_state
-# from nncf import create_compressed_model, register_default_init_args
-# from nncf.utils import get_all_modules
+    _is_nncf_enabled = True
+except:
+    _is_nncf_enabled = False
 
 
-def is_nncf_enabled() -> Bool:
-    try:
-        import nncf
-        _is_nncf_enabled = True
-    except:
-        _is_nncf_enabled = False
+def is_nncf_enabled():
+    return _is_nncf_enabled
+
+
+def check_nncf_is_enabled():
+    if not is_nncf_enabled():
+        raise RuntimeError("Tried to use NNCF, but NNCF is not installed")
+
+
+if is_nncf_enabled():
     try:
         from nncf.initialization import InitializingDataLoader
         from nncf.structures import QuantizationRangeInitArgs
@@ -26,13 +29,14 @@ def is_nncf_enabled() -> Bool:
         from nncf import NNCFConfig
         from nncf import load_state
         from nncf import create_compressed_model, register_default_init_args
+        from nncf.utils import get_all_modules
+        from nncf.dynamic_graph.context import no_nncf_trace as original_no_nncf_trace
     except:
         raise RuntimeError("Incompatible version of NNCF")
 
-    return _is_nncf_enabled
-
 
 def wrap_nncf_model(model, cfg, data_loader_for_init=None, checkpoint=None):
+    check_nncf_is_enabled()
     pathlib.Path(cfg.work_dir).mkdir(parents=True, exist_ok=True)
     nncf_config = NNCFConfig(cfg.nncf_config)
 
@@ -43,7 +47,7 @@ def wrap_nncf_model(model, cfg, data_loader_for_init=None, checkpoint=None):
         nncf_config.register_extra_structs([QuantizationRangeInitArgs(wrapped_loader)])
 
     if checkpoint:
-        resuming_state_dict = load_checkpoint(model, cfg.load_from)
+        resuming_state_dict = load_checkpoint(model, checkpoint)
     else:
         resuming_state_dict = None
 
@@ -98,3 +102,20 @@ class MMInitializeDataLoader(InitializingDataLoader):
     # TODO: not tested; need to test
     def get_target(self, dataloader_output):
         return dataloader_output["gt_bboxes"], dataloader_output["gt_labels"]
+
+
+@contextmanager
+def nullcontext():
+    """
+    Context which does nothing; is needed to support python > python3.7
+    """
+    yield
+
+
+def no_nncf_trace():
+    """
+    Wrapper for original NNCF no_nncf_trace() context
+    """
+    if is_nncf_enabled():
+        return original_no_nncf_trace()
+    return nullcontext()

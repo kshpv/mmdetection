@@ -1,10 +1,12 @@
 from .hooks import CompressionHook
 from .utils import wrap_nncf_model
-from .utils import is_nncf_enabled
+from .utils import check_nncf_is_enabled
+from .utils import no_nncf_trace
 
 
 __all__ = [
     'CompressionHook',
-    'is_nncf_enabled',
+    'check_nncf_is_enabled',
     'wrap_nncf_model',
+    'no_nncf_trace'
 ]
