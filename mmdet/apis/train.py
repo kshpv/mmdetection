@@ -13,6 +13,7 @@ from mmdet.parallel import MMDataCPU
 
 from mmdet.core.nncf import wrap_nncf_model
 
+
 def set_random_seed(seed, deterministic=False):
     """Set random seed.
 
@@ -79,10 +80,6 @@ def train_detector(model,
             seed=cfg.seed) for ds in dataset
     ]
 
-    # TODO: Do we need that?
-    if cfg.load_from:
-        load_checkpoint(model=model, filename=cfg.load_from)
-
     # put model on gpus
     if torch.cuda.is_available():
         model = model.cuda()
@@ -143,8 +140,6 @@ def train_detector(model,
     if distributed:
         runner.register_hook(DistSamplerSeedHook())
 
-
-
     add_logging_on_first_and_last_iter(runner)
 
     # register eval hooks
@@ -166,5 +161,7 @@ def train_detector(model,
 
     if cfg.resume_from:
         runner.resume(cfg.resume_from, map_location=map_location)
+    elif cfg.load_from and not cfg.ENABLE_COMPRESSION:
+        runner.load_checkpoint(cfg.load_from)
 
     runner.run(data_loaders, cfg.workflow, cfg.total_epochs, compression_ctrl=compression_ctrl)

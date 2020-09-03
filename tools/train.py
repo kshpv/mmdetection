@@ -24,6 +24,7 @@ from mmdet.utils import collect_env, get_root_logger, ExtendedDictAction
 
 from mmdet.core.nncf import is_nncf_enabled
 
+
 def parse_args():
     parser = argparse.ArgumentParser(description='Train a detector')
     parser.add_argument('config', help='train config file path')
