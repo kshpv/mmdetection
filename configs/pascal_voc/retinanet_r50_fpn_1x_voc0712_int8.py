@@ -25,7 +25,7 @@ data = dict(
 dist_params = dict(backend='nccl')
 log_level = 'INFO'
 
-work_dir = '.outputs/nncf_output/retinanet_r50_fpn_voc0712_int8/'
+work_dir = './outputs/nncf_output/retinanet_r50_fpn_voc0712_int8'
 workflow = [('train', 1)]
 
 find_unused_parameters = True
