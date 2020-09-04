@@ -36,6 +36,7 @@ class EvalHook(Hook):
 
     def evaluate(self, runner, results):
         print (f"eval_kwargs = {self.eval_kwargs}")
+        self.eval_kwargs.pop('test_cfg', None)
         eval_res = self.dataloader.dataset.evaluate(
             results, logger=runner.logger, **self.eval_kwargs)
         for name, val in eval_res.items():

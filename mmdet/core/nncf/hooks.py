@@ -27,6 +27,7 @@ class CompressionHook(Hook):
         input_kwargs = dict(return_loss=False, dummy_forward=True)
 
         runner.logger.info("Exporting the model to ONXX format")
+        # TODO: args and kwargs
         self.compression_ctrl.export_model("compressed_model.onnx", *input_args, **input_kwargs)
 
 

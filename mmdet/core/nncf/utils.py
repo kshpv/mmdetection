@@ -35,7 +35,7 @@ if is_nncf_enabled():
         raise RuntimeError("Incompatible version of NNCF")
 
 
-def wrap_nncf_model(model, cfg, data_loader_for_init=None, checkpoint=None):
+def wrap_nncf_model(model, cfg, data_loader_for_init=None):
     check_nncf_is_enabled()
     pathlib.Path(cfg.work_dir).mkdir(parents=True, exist_ok=True)
     nncf_config = NNCFConfig(cfg.nncf_config)
@@ -46,8 +46,8 @@ def wrap_nncf_model(model, cfg, data_loader_for_init=None, checkpoint=None):
         # TODO: add loss factory that reads config file, creates them and passes to register_default_init_args()
         nncf_config.register_extra_structs([QuantizationRangeInitArgs(wrapped_loader)])
 
-    if checkpoint:
-        resuming_state_dict = load_checkpoint(model, checkpoint)
+    if cfg.resume_from:
+        resuming_state_dict = load_checkpoint(model, cfg.resume_from)
     else:
         resuming_state_dict = None
 
