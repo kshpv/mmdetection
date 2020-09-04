@@ -90,6 +90,8 @@ def train_detector(model,
     # nncf model wrapper
     if cfg.ENABLE_COMPRESSION:
         compression_ctrl, model = wrap_nncf_model(model, cfg, data_loaders[0])
+        if distributed:
+            compression_ctrl.distributed()
     else:
         compression_ctrl = None
 
@@ -111,9 +113,6 @@ def train_detector(model,
     else:
         model = MMDataCPU(model)
         map_location = 'cpu'
-
-    if cfg.ENABLE_COMPRESSION and distributed:
-        compression_ctrl.distributed()
 
     # build runner
     optimizer = build_optimizer(model, cfg.optimizer)

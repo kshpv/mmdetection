@@ -17,6 +17,7 @@ from mmdet.parallel import MMDataCPU
 
 from mmdet.core.nncf import wrap_nncf_model, check_nncf_is_enabled
 
+
 def parse_args():
     parser = argparse.ArgumentParser(
         description='MMDet test (and eval) a model')
@@ -27,19 +28,19 @@ def parse_args():
         '--fuse-conv-bn',
         action='store_true',
         help='Whether to fuse conv and bn, this will slightly increase'
-        'the inference speed')
+             'the inference speed')
     parser.add_argument(
         '--format-only',
         action='store_true',
         help='Format the output results without perform evaluation. It is'
-        'useful when you want to format the result to a specific format and '
-        'submit it to the test server')
+             'useful when you want to format the result to a specific format and '
+             'submit it to the test server')
     parser.add_argument(
         '--eval',
         type=str,
         nargs='+',
         help='evaluation metrics, which depends on the dataset, e.g., "bbox",'
-        ' "segm", "proposal", "f1" for COCO, and "mAP", "recall" for PASCAL VOC')
+             ' "segm", "proposal", "f1" for COCO, and "mAP", "recall" for PASCAL VOC')
     parser.add_argument('--show', action='store_true', help='show results')
     parser.add_argument(
         '--show-dir', help='directory where painted images will be saved')
@@ -55,7 +56,7 @@ def parse_args():
     parser.add_argument(
         '--tmpdir',
         help='tmp directory used for collecting results from multiple '
-        'workers, available when gpu-collect is not specified')
+             'workers, available when gpu-collect is not specified')
     parser.add_argument(
         '--options', nargs='+', action=DictAction, help='arguments in dict')
     parser.add_argument(
@@ -77,7 +78,7 @@ def main():
     args = parse_args()
 
     assert args.out or args.eval or args.format_only or args.show \
-        or args.show_dir, \
+           or args.show_dir, \
         ('Please specify at least one operation (save/eval/format/show the '
          'results / save the results) with the argument "--out", "--eval"'
          ', "--format-only", "--show" or "--show-dir"')
@@ -117,7 +118,6 @@ def main():
     # build the model and load checkpoint
     model = build_detector(cfg.model, train_cfg=None, test_cfg=cfg.test_cfg)
 
-
     # nncf model wrapper
     if 'nncf_config' in cfg:
         check_nncf_is_enabled()
@@ -129,7 +129,6 @@ def main():
         checkpoint = load_checkpoint(model, args.checkpoint, map_location='cpu')
         if args.fuse_conv_bn:
             model = fuse_module(model)
-
 
         # old versions did not save class info in checkpoints, this walkaround is
         # for backward compatibility

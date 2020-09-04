@@ -46,8 +46,8 @@ def wrap_nncf_model(model, cfg, data_loader_for_init=None):
         # TODO: add loss factory that reads config file, creates them and passes to register_default_init_args()
         nncf_config.register_extra_structs([QuantizationRangeInitArgs(wrapped_loader)])
 
-    if cfg.resume_from:
-        resuming_state_dict = load_checkpoint(model, cfg.resume_from)
+    if cfg.load_from:
+        resuming_state_dict = load_checkpoint(model, cfg.load_from)
     else:
         resuming_state_dict = None
 
@@ -80,6 +80,9 @@ def load_checkpoint(model, filename, map_location=None, strict=False):
         dict or OrderedDict: The loaded checkpoint.
     """
     # load checkpoint from modelzoo or file or url
+    if filename.startswith('modelzoo://') or filename.startswith('torchvision://') or filename.startswith(
+            'open-mmlab://') or filename.startswith(('http://', 'https://')):
+        return None
     checkpoint = torch.load(filename, map_location=map_location)
     # get state_dict from checkpoint
     if isinstance(checkpoint, OrderedDict):
