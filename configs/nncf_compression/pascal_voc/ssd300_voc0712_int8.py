@@ -7,8 +7,6 @@ model = dict(
         num_classes=20, anchor_generator=dict(basesize_ratio_range=(0.2,
                                                                     0.9))))
 # dataset settings
-dataset_type = 'VOCDataset'
-data_root = 'data/VOCdevkit/'
 img_norm_cfg = dict(mean=[123.675, 116.28, 103.53], std=[1, 1, 1], to_rgb=True)
 train_pipeline = [
     dict(type='LoadImageFromFile', to_float32=True),

@@ -20,12 +20,11 @@ data = dict(
 )
 
 
-
 # nncf config
 dist_params = dict(backend='nccl')
 log_level = 'INFO'
 
-work_dir = './retinanet_r50_fpn_voc0712_int8'
+work_dir = './'
 workflow = [('train', 1)]
 
 find_unused_parameters = True
