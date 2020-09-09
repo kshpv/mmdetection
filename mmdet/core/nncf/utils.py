@@ -65,6 +65,7 @@ def wrap_nncf_model(model, cfg, data_loader_for_init=None):
     compression_ctrl, model = create_compressed_model(model, nncf_config, dummy_forward_fn=dummy_forward,
                                                       resuming_state_dict=resuming_state_dict)
     print(*get_all_modules(model).keys(), sep="\n")
+    print (f"compression_ctrl.child_ctrls = {compression_ctrl.child_ctrls}")
     return compression_ctrl, model
 
 

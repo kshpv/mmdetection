@@ -17,19 +17,6 @@ class CompressionHook(Hook):
         self.compression_ctrl.scheduler.epoch_step()
 
     def before_run(self, runner):
-        print_statistics(self.compression_ctrl.statistics(), runner.logger)
-
-    def after_run(self, runner):
-        from .utils import export_model_to_onnx
-
-        runner.logger.info("Exporting the model to ONXX format")
-        f_name = str(self.work_dir) + "/compressed_model_" + str(
-            self.compression_ctrl.scheduler.last_epoch + 1) + ".onnx"
-        export_model_to_onnx(self.compression_ctrl, self.nncf_config, f_name)
-
-
-class DistCompressionHook(CompressionHook):
-    def before_run(self, runner):
         if runner.rank == 0:
             print_statistics(self.compression_ctrl.statistics(), runner.logger)
 
