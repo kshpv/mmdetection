@@ -61,9 +61,11 @@ data = dict(
 optimizer = dict(type='SGD', lr=2e-4, momentum=0.9, weight_decay=5e-4)
 optimizer_config = dict(_delete_=True)
 
+work_dir = './output'
 load_from = 'http://download.openmmlab.com/mmdetection/v2.0/ssd/ssd300_coco/ssd300_coco_20200307-a92d2092.pth'
+
 find_unused_parameters = True
-work_dir = './'
+nncf_load_from = None
 
 nncf_config = {
     "input_info": {

@@ -27,12 +27,10 @@ class EvalHook(Hook):
         results = single_gpu_test(runner.model, self.dataloader, show=False)
         self.evaluate(runner, results)
 
-    # def before_train_epoch(self, runner):
-    #     if not self.every_n_epochs(runner, self.interval):
-    #         return
-    #     from mmdet.apis import single_gpu_test
-    #     results = single_gpu_test(runner.model, self.dataloader, show=False)
-    #     self.evaluate(runner, results)
+    def before_run(self, runner):
+        from mmdet.apis import single_gpu_test
+        results = single_gpu_test(runner.model, self.dataloader, show=False)
+        self.evaluate(runner, results)
 
     def evaluate(self, runner, results):
         print (f"eval_kwargs = {self.eval_kwargs}")
@@ -68,6 +66,17 @@ class DistEvalHook(EvalHook):
         self.interval = interval
         self.gpu_collect = gpu_collect
         self.eval_kwargs = eval_kwargs
+
+    def before_run(self, runner):
+        from mmdet.apis import multi_gpu_test
+        results = multi_gpu_test(
+            runner.model,
+            self.dataloader,
+            tmpdir=osp.join(runner.work_dir, '.eval_hook'),
+            gpu_collect=self.gpu_collect)
+        if runner.rank == 0:
+            print('\n')
+            self.evaluate(runner, results)
 
     def after_train_epoch(self, runner):
         if not self.every_n_epochs(runner, self.interval):

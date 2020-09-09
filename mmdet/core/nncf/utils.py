@@ -45,8 +45,10 @@ def wrap_nncf_model(model, cfg, data_loader_for_init=None):
         # TODO: [NNCF] need check the arguments in register_default_init_args()
         # TODO: add loss factory that reads config file, creates them and passes to register_default_init_args()
         nncf_config.register_extra_structs([QuantizationRangeInitArgs(wrapped_loader)])
+    elif not cfg.nncf_load_from:
+        raise RuntimeError("Tried to load NNCF checkpoint, but there is no path")
 
-    if cfg.load_from:
+    if cfg.nncf_load_from:
         resuming_state_dict = load_checkpoint(model, cfg.load_from)
     else:
         resuming_state_dict = None
@@ -79,10 +81,6 @@ def load_checkpoint(model, filename, map_location=None, strict=False):
     Returns:
         dict or OrderedDict: The loaded checkpoint.
     """
-    # load checkpoint from modelzoo or file or url
-    if filename.startswith('modelzoo://') or filename.startswith('torchvision://') or filename.startswith(
-            'open-mmlab://') or filename.startswith(('http://', 'https://')):
-        return None
     checkpoint = torch.load(filename, map_location=map_location)
     # get state_dict from checkpoint
     if isinstance(checkpoint, OrderedDict):
@@ -95,10 +93,23 @@ def load_checkpoint(model, filename, map_location=None, strict=False):
     return checkpoint
 
 
+def export_model_to_onnx(compression_ctrl, nncf_config, f_name):
+    check_nncf_is_enabled()
+    input_size = nncf_config.get("input_info").get('sample_size')
+    device = "cpu"
+    input_args = ([torch.randn(input_size).to(device), ],)
+    input_kwargs = dict(return_loss=False, dummy_forward=True)
+    compression_ctrl.export_model(f_name, *input_args, **input_kwargs)
+
+
 class MMInitializeDataLoader(InitializingDataLoader):
     def get_inputs(self, dataloader_output):
         # redefined InitializingDataLoader because
         # of DataContainer format in mmdet
+        # print (f"dataloader_ouput.items( = {dataloader_output.items()}")
+        # kwargs = {k: v for k, v in dataloader_output.items()}
+        # print (f"kwargs = {kwargs}")
+        # print (f"kwargs['img'] = {kwargs['img']}")
         kwargs = {k: v.data[0] for k, v in dataloader_output.items()}
         return (), kwargs
 

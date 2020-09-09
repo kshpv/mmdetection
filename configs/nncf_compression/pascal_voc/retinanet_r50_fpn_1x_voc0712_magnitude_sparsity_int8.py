@@ -33,17 +33,34 @@ nncf_config = {
     "input_info": {
         "sample_size": [1, 3, 1000, 600]
     },
-    "compression": {
-        "algorithm": "quantization",
-        "initializer": {
-            "range": {
-                "num_init_steps": 10
-            },
-            "batchnorm_adaptation": {
-                "num_bn_adaptation_steps": 30,
-            }
+    "compression": [
+        {
+            "algorithm": "quantization",
+            "initializer": {
+                "range": {
+                    "num_init_steps": 10
+                },
+                "batchnorm_adaptation": {
+                    "num_bn_adaptation_steps": 30,
+                }
 
-        }
-    },
+            }
+        },
+        {
+            "algorithm": "magnitude_sparsity",
+            "params": {
+                "schedule": "multistep",
+                "multistep_sparsity_levels": [
+                    0.3,
+                    0.5,
+                    0.7
+                ],
+                "multistep_steps": [
+                    40,
+                    80
+                ]
+            }
+        },
+    ],
     "log_dir": work_dir
 }

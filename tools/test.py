@@ -121,7 +121,7 @@ def main():
     # nncf model wrapper
     if 'nncf_config' in cfg:
         check_nncf_is_enabled()
-        _, model = wrap_nncf_model(model, cfg, None, args.checkpoint)
+        _, model = wrap_nncf_model(model, cfg, None)
     else:
         fp16_cfg = cfg.get('fp16', None)
         if fp16_cfg is not None:

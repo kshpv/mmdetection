@@ -1,6 +1,6 @@
 _base_ = [
-    '../_base_/models/ssd300.py', '../_base_/datasets/voc0712.py',
-    '../_base_/default_runtime.py'
+    '../../_base_/models/ssd300.py', '../../_base_/datasets/voc0712.py',
+    '../../_base_/default_runtime.py'
 ]
 model = dict(
     bbox_head=dict(
@@ -66,9 +66,12 @@ checkpoint_config = dict(interval=1)
 # runtime settings
 total_epochs = 2
 
+work_dir = './output'
 load_from = '../original_mmdetection/mmdetection/ssd300_voc_vgg16_caffe_240e_20190501-7160d09a.pth'
 
-find_unused_parameters=True
+find_unused_parameters = True
+nncf_load_from = None
+
 nncf_config = {
     "input_info": {
         "sample_size": [1, 3, 300, 300]
@@ -84,5 +87,6 @@ nncf_config = {
             }
 
         }
-    }
+    },
+    "log_dir": work_dir
 }
