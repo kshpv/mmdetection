@@ -3,6 +3,7 @@ from collections import OrderedDict
 from contextlib import contextmanager
 
 import torch
+from mmdet.utils import get_root_logger
 
 try:
     import nncf
@@ -39,6 +40,7 @@ def wrap_nncf_model(model, cfg, data_loader_for_init=None):
     check_nncf_is_enabled()
     pathlib.Path(cfg.work_dir).mkdir(parents=True, exist_ok=True)
     nncf_config = NNCFConfig(cfg.nncf_config)
+    logger = get_root_logger(cfg.log_level)
 
     if data_loader_for_init:
         wrapped_loader = MMInitializeDataLoader(data_loader_for_init)
@@ -49,7 +51,8 @@ def wrap_nncf_model(model, cfg, data_loader_for_init=None):
         raise RuntimeError("Tried to load NNCF checkpoint, but there is no path")
 
     if cfg.nncf_load_from:
-        resuming_state_dict = load_checkpoint(model, cfg.load_from)
+        resuming_state_dict = load_checkpoint(model, cfg.nncf_load_from)
+        logger.info(f"loaded nncf checkpoint from {cfg.nncf_load_from}")
     else:
         resuming_state_dict = None
 
