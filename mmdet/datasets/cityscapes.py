@@ -187,7 +187,8 @@ class CityscapesDataset(CocoDataset):
                  outfile_prefix=None,
                  classwise=False,
                  proposal_nums=(100, 300, 1000),
-                 iou_thrs=np.arange(0.5, 0.96, 0.05)):
+                 iou_thrs=np.arange(0.5, 0.96, 0.05),
+                 **kwargs):
         """Evaluation in Cityscapes protocol.
 
         Args:
@@ -229,7 +230,7 @@ class CityscapesDataset(CocoDataset):
             self_coco.data_infos = self_coco.load_annotations(self.ann_file)
             eval_results.update(
                 self_coco.evaluate(results, metrics, logger, outfile_prefix,
-                                   classwise, proposal_nums, iou_thrs))
+                                   classwise, proposal_nums, iou_thrs, **kwargs))
 
         return eval_results
 
