@@ -65,7 +65,6 @@ def wrap_nncf_model(model, cfg, data_loader_for_init=None):
     compression_ctrl, model = create_compressed_model(model, nncf_config, dummy_forward_fn=dummy_forward,
                                                       resuming_state_dict=resuming_state_dict)
     print(*get_all_modules(model).keys(), sep="\n")
-    print (f"compression_ctrl.child_ctrls = {compression_ctrl.child_ctrls}")
     return compression_ctrl, model
 
 
@@ -107,10 +106,6 @@ class MMInitializeDataLoader(InitializingDataLoader):
     def get_inputs(self, dataloader_output):
         # redefined InitializingDataLoader because
         # of DataContainer format in mmdet
-        # print (f"dataloader_ouput.items( = {dataloader_output.items()}")
-        # kwargs = {k: v for k, v in dataloader_output.items()}
-        # print (f"kwargs = {kwargs}")
-        # print (f"kwargs['img'] = {kwargs['img']}")
         kwargs = {k: v.data[0] for k, v in dataloader_output.items()}
         return (), kwargs
 

@@ -6,7 +6,7 @@ from mmcv.parallel import MMDataParallel, MMDistributedDataParallel
 from mmcv.runner import (DistSamplerSeedHook, EpochBasedRunner, OptimizerHook,
                          build_optimizer, LoggerHook, load_checkpoint)
 
-from mmdet.core import DistEvalHook, EvalHook, Fp16OptimizerHook, CompressionHook, DistCompressionHook
+from mmdet.core import DistEvalHook, EvalHook, Fp16OptimizerHook, CompressionHook
 from mmdet.datasets import build_dataloader, build_dataset
 from mmdet.utils import get_root_logger
 from mmdet.parallel import MMDataCPU
@@ -160,8 +160,7 @@ def train_detector(model,
         runner.register_hook(eval_hook(val_dataloader, **eval_cfg))
 
     if cfg.ENABLE_COMPRESSION:
-        compression_hook = DistCompressionHook if distributed else CompressionHook
-        runner.register_hook(compression_hook(compression_ctrl=compression_ctrl, cfg=cfg))
+        runner.register_hook(CompressionHook(compression_ctrl=compression_ctrl, cfg=cfg))
 
     if cfg.resume_from:
         runner.resume(cfg.resume_from, map_location=map_location)
