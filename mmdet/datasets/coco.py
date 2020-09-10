@@ -336,7 +336,8 @@ class CocoDataset(CustomDataset):
                  classwise=False,
                  proposal_nums=(100, 300, 1000),
                  iou_thrs=np.arange(0.5, 0.96, 0.05),
-                 test_cfg=None):
+                 test_cfg=None,
+                 **kwargs):
         """Evaluation in COCO protocol.
 
         Args:
