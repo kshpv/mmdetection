@@ -7,8 +7,6 @@ class CompressionHook(Hook):
         from nncf import NNCFConfig
 
         self.compression_ctrl = compression_ctrl
-        # TODO: is it required now?
-        # self.nncf_config = NNCFConfig(cfg.nncf_config)
         self.work_dir = cfg.work_dir
 
     def after_train_iter(self, runner):
@@ -20,10 +18,6 @@ class CompressionHook(Hook):
     def before_run(self, runner):
         if runner.rank == 0:
             print_statistics(self.compression_ctrl.statistics(), runner.logger)
-
-    def after_run(self, runner):
-        pass
-
 
 def print_statistics(stats, logger):
     for key, val in stats.items():

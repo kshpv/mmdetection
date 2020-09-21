@@ -27,7 +27,6 @@ if is_nncf_enabled():
     try:
         from nncf.initialization import InitializingDataLoader
         from nncf.structures import QuantizationRangeInitArgs
-        from nncf.compression_method_api import CompressionAlgorithmController
 
         from nncf import NNCFConfig
         from nncf import load_state
@@ -35,23 +34,30 @@ if is_nncf_enabled():
         from nncf.utils import get_all_modules
         from nncf.dynamic_graph.context import no_nncf_trace as original_no_nncf_trace
 
-        class_CompressionAlgorithmController = CompressionAlgorithmController
         class_InitializingDataLoader = InitializingDataLoader
     except:
         raise RuntimeError("Incompatible version of NNCF")
 else:
-    class DummyCompressionAlgorithmController:
-        pass
     class DummyInitializingDataLoader:
         pass
 
-    class_CompressionAlgorithmController = DummyCompressionAlgorithmController
     class_InitializingDataLoader = DummyInitializingDataLoader
 
 def check_NNCFNetwork_is_compatible():
     check_nncf_is_enabled()
     from nncf.nncf_network import NNCFNetwork
     assert not hasattr(NNCFNetwork, "export"), "NNCFNetwork should not contain 'export', since it is defined in BaseDetector"
+
+class MMInitializeDataLoader(class_InitializingDataLoader):
+    def get_inputs(self, dataloader_output):
+        # redefined InitializingDataLoader because
+        # of DataContainer format in mmdet
+        kwargs = {k: v.data[0] for k, v in dataloader_output.items()}
+        return (), kwargs
+
+    # TODO: not tested; need to test
+    def get_target(self, dataloader_output):
+        return dataloader_output["gt_bboxes"], dataloader_output["gt_labels"]
 
 def wrap_nncf_model(model, cfg, data_loader_for_init=None, get_fake_input_func=None,
                     should_use_dummy_forward_with_export_part=True):
@@ -162,17 +168,6 @@ def export_model_to_onnx(compression_ctrl, f_name):
     logger.error("The function 'mmdet.core.nncf.export_model_to_onnx' is obsolete now "
                  "-- please, use the script tools/export.py with the same config file and the corresponding snapshot")
     logger.error("Now the function 'mmdet.core.nncf.export_model_to_onnx' does nothing and return")
-
-class MMInitializeDataLoader(class_InitializingDataLoader):
-    def get_inputs(self, dataloader_output):
-        # redefined InitializingDataLoader because
-        # of DataContainer format in mmdet
-        kwargs = {k: v.data[0] for k, v in dataloader_output.items()}
-        return (), kwargs
-
-    # TODO: not tested; need to test
-    def get_target(self, dataloader_output):
-        return dataloader_output["gt_bboxes"], dataloader_output["gt_labels"]
 
 
 @contextmanager
