@@ -18,23 +18,21 @@ import sys
 from subprocess import run, CalledProcessError, DEVNULL
 
 import mmcv
-import numpy as np
 import onnx
 import torch
 from onnx.optimizer import optimize
 from torch.onnx.symbolic_helper import _onnx_stable_opsets as available_opsets
 
-from mmcv.parallel import collate, scatter
 from mmdet.apis import init_detector
-from mmdet.apis.inference import LoadImage
-from mmdet.datasets.pipelines import Compose
 from mmdet.models import detectors
 from mmdet.models.dense_heads.anchor_head import AnchorHead
 from mmdet.models.roi_heads import SingleRoIExtractor
 from mmdet.utils.deployment.ssd_export_helpers import *
 from mmdet.utils.deployment.symbolic import register_extra_symbolics
 from mmdet.utils.deployment.tracer_stubs import AnchorsGridGeneratorStub, ROIFeatureExtractorStub
+from mmdet.apis import get_fake_input
 
+from mmdet.core.nncf import wrap_nncf_model, check_nncf_is_enabled
 
 def export_to_onnx(model,
                    data,
@@ -199,16 +197,6 @@ def stub_roi_feature_extractor(model, extractor_name):
                 if isinstance(extractor[i], SingleRoIExtractor):
                     extractor[i] = ROIFeatureExtractorStub(extractor[i])
 
-
-def get_fake_input(cfg, orig_img_shape=(128, 128, 3), device='cuda'):
-    test_pipeline = [LoadImage()] + cfg.data.test.pipeline[1:]
-    test_pipeline = Compose(test_pipeline)
-    data = dict(img=np.zeros(orig_img_shape, dtype=np.uint8))
-    data = test_pipeline(data)
-    data = scatter(collate([data], samples_per_gpu=1), [device])[0]
-    return data
-
-
 def optimize_onnx_graph(onnx_model_path):
     onnx_model = onnx.load(onnx_model_path)
 
@@ -239,6 +227,13 @@ def main(args):
     device = next(model.parameters()).device
     cfg = model.cfg
     fake_data = get_fake_input(cfg, device=device)
+
+    # BEGIN nncf part
+    if 'nncf_config' in cfg:
+        check_nncf_is_enabled()
+        compression_ctrl, model = wrap_nncf_model(model, cfg, None, get_fake_input)
+        compression_ctrl.prepare_for_export()
+    # END nncf part
 
     if args.target == 'openvino' and not args.alt_ssd_export:
         stub_anchor_generator(model, 'rpn_head')
