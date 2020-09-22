@@ -231,6 +231,7 @@ def main(args):
     # BEGIN nncf part
     if 'nncf_config' in cfg:
         check_nncf_is_enabled()
+        cfg.nncf_load_from = args.checkpoint
         compression_ctrl, model = wrap_nncf_model(model, cfg, None, get_fake_input)
         compression_ctrl.prepare_for_export()
     # END nncf part

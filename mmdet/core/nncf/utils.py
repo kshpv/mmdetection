@@ -134,7 +134,6 @@ def wrap_nncf_model(model, cfg, data_loader_for_init=None, get_fake_input_func=N
 
     compression_ctrl, model = create_compressed_model(model, nncf_config, dummy_forward_fn=dummy_forward,
                                                       resuming_state_dict=resuming_state_dict)
-    print(*get_all_modules(model).keys(), sep="\n")
     return compression_ctrl, model
 
 

@@ -3,11 +3,8 @@ from mmcv.runner.hooks.hook import Hook
 
 
 class CompressionHook(Hook):
-    def __init__(self, compression_ctrl=None, cfg=None):
-        from nncf import NNCFConfig
-
+    def __init__(self, compression_ctrl=None):
         self.compression_ctrl = compression_ctrl
-        self.work_dir = cfg.work_dir
 
     def after_train_iter(self, runner):
         self.compression_ctrl.scheduler.step()
@@ -18,6 +15,7 @@ class CompressionHook(Hook):
     def before_run(self, runner):
         if runner.rank == 0:
             print_statistics(self.compression_ctrl.statistics(), runner.logger)
+
 
 def print_statistics(stats, logger):
     for key, val in stats.items():
