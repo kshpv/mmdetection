@@ -132,7 +132,7 @@ def main():
     model = build_detector(cfg.model, train_cfg=None, test_cfg=cfg.test_cfg)
 
     # nncf model wrapper
-    if 'nncf_config' in cfg:
+    if cfg.get('nncf_config'):
         check_nncf_is_enabled()
         cfg.nncf_load_from = args.checkpoint
         model.cuda() # for wrap_nncf_model
