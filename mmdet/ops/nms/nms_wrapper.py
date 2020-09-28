@@ -7,6 +7,7 @@ from torch.onnx import is_in_onnx_export
 from mmdet.utils.deployment.symbolic import py_symbolic
 from . import nms_ext
 
+from ...core.nncf import no_nncf_trace
 
 def nms(dets, iou_thr, score_thr=0.0, max_num=-1, device_id=None):
     """Dispatch to either CPU or GPU NMS implementations.
@@ -62,7 +63,9 @@ def nms(dets, iou_thr, score_thr=0.0, max_num=-1, device_id=None):
 @py_symbolic()
 def nms_core(dets, iou_thr, score_thr, max_num):
     if is_in_onnx_export():
-        valid_dets_mask = dets[:, 4] > score_thr
+        with no_nncf_trace():
+            #valid_mask = scores > score_thr
+            valid_dets_mask = dets[:, 4] > score_thr
         dets = dets[valid_dets_mask]
 
     if dets.shape[0] == 0:

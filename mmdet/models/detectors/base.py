@@ -19,6 +19,7 @@ from mmdet.utils import get_root_logger
 
 from nncf.dynamic_graph.context import no_nncf_trace
 
+
 class BaseDetector(nn.Module, metaclass=ABCMeta):
     """Base class for detectors"""
 
@@ -197,9 +198,9 @@ class BaseDetector(nn.Module, metaclass=ABCMeta):
         self.forward_backup = None
         self.img_metas = None
 
-    def export(self, img, img_metas, export_name='', **kwargs):
+    def export(self, model, img, img_metas, export_name='', **kwargs):
         with self.forward_export_context(img_metas):
-            torch.onnx.export(self, img, export_name, **kwargs)
+            torch.onnx.export(model, img, export_name, **kwargs)
 
     def _parse_losses(self, losses):
         """Parse the raw outputs (losses) of the network.

@@ -34,6 +34,7 @@ from mmdet.apis import get_fake_input
 
 from mmdet.core.nncf import wrap_nncf_model, check_nncf_is_enabled
 
+
 def export_to_onnx(model,
                    data,
                    export_name,
@@ -78,21 +79,19 @@ def export_to_onnx(model,
             if model.roi_head.with_mask:
                 output_names.append('masks')
                 dynamic_axes['masks'] = {0: 'objects_num'}
-
-        with torch.no_grad():
-            model.export(
-                **data,
-                export_name=export_name,
-                verbose=verbose,
-                opset_version=opset,
-                strip_doc_string=strip_doc_string,
-                operator_export_type=torch.onnx.OperatorExportTypes.ONNX,
-                input_names=['image'],
-                output_names=output_names,
-                dynamic_axes=dynamic_axes,
-                keep_initializers_as_inputs=True,
-                **kwargs
-            )
+        with torch.no_grad() and model.forward_export_context(data['img_metas']):
+            torch.onnx.export(model,
+                              data['img'],
+                              export_name,
+                              verbose=verbose,
+                              opset_version=opset,
+                              strip_doc_string=strip_doc_string,
+                              operator_export_type=torch.onnx.OperatorExportTypes.ONNX,
+                              input_names=['image'],
+                              output_names=output_names,
+                              dynamic_axes=dynamic_axes,
+                              keep_initializers_as_inputs=True,
+                              **kwargs)
 
 
 def check_onnx_model(export_name):
@@ -196,6 +195,7 @@ def stub_roi_feature_extractor(model, extractor_name):
             for i in range(len(extractor)):
                 if isinstance(extractor[i], SingleRoIExtractor):
                     extractor[i] = ROIFeatureExtractorStub(extractor[i])
+
 
 def optimize_onnx_graph(onnx_model_path):
     onnx_model = onnx.load(onnx_model_path)
