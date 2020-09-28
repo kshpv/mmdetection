@@ -5,6 +5,7 @@ from collections import OrderedDict
 import mmcv
 import numpy as np
 from contextlib import contextmanager
+from functools import partial
 
 import pycocotools.mask as maskUtils
 import torch
@@ -117,6 +118,11 @@ class BaseDetector(nn.Module, metaclass=ABCMeta):
                 augs (multiscale, flip, etc.) and the inner list indicates
                 images in a batch.
         """
+        if kwargs.get("forward_export"):
+            logger = get_root_logger()
+            logger.info("Calling forward_export inside forward_test")
+            return self.forward_export(imgs)
+
         if kwargs.get("dummy_forward"):
             return self.forward_dummy(imgs[0])
 
@@ -169,7 +175,7 @@ class BaseDetector(nn.Module, metaclass=ABCMeta):
 
     def forward_export(self, imgs):
         from torch.onnx.operators import shape_as_tensor
-        assert self.img_metas
+        assert self.img_metas, "Error: forward_export should be called inside forward_export_context"
 
         img_shape = shape_as_tensor(imgs[0])
         imgs_per_gpu = int(imgs[0].size(0))
@@ -181,9 +187,11 @@ class BaseDetector(nn.Module, metaclass=ABCMeta):
 
     @contextmanager
     def forward_export_context(self, img_metas):
+        assert self.img_metas is None and self.forward_backup is None, "Error: forward_export_context inside forward_export_context"
+
         self.img_metas = img_metas
         self.forward_backup = self.forward
-        self.forward = self.forward_export
+        self.forward = partial(self.forward, return_loss=False, forward_export=True, img_metas=None)
         yield
         self.forward = self.forward_backup
         self.forward_backup = None
