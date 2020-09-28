@@ -210,7 +210,7 @@ def main():
     logger.info(f'Distributed training: {distributed}')
     logger.info(f'Config:\n{cfg.pretty_text}')
 
-    if 'nncf_config' in cfg:
+    if cfg.get('nncf_config'):
         check_nncf_is_enabled()
         logger.info('NNCF config: {}'.format(cfg.nncf_config))
         cfg.ENABLE_COMPRESSION = True

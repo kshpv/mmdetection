@@ -229,7 +229,7 @@ def main(args):
     fake_data = get_fake_input(cfg, device=device)
 
     # BEGIN nncf part
-    if 'nncf_config' in cfg:
+    if cfg.get('nncf_config'):
         check_nncf_is_enabled()
         cfg.nncf_load_from = args.checkpoint
         compression_ctrl, model = wrap_nncf_model(model, cfg, None, get_fake_input)
@@ -249,7 +249,8 @@ def main(args):
 
     with torch.no_grad():
         export_to_onnx(model, fake_data, export_name=onnx_model_path, opset=args.opset,
-                       alt_ssd_export=getattr(args, 'alt_ssd_export', False))
+                       alt_ssd_export=getattr(args, 'alt_ssd_export', False),
+                       verbose=True)
         add_node_names(onnx_model_path)
         print(f'ONNX model has been saved to "{onnx_model_path}"')
 
