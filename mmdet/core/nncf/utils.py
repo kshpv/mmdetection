@@ -33,6 +33,7 @@ if is_nncf_enabled():
         from nncf import create_compressed_model, register_default_init_args
         from nncf.utils import get_all_modules
         from nncf.dynamic_graph.context import no_nncf_trace as original_no_nncf_trace
+        from nncf.nncf_network import NNCFNetwork
 
         class_InitializingDataLoader = InitializingDataLoader
     except:
@@ -43,10 +44,12 @@ else:
 
     class_InitializingDataLoader = DummyInitializingDataLoader
 
-def check_NNCFNetwork_is_compatible():
-    check_nncf_is_enabled()
-    from nncf.nncf_network import NNCFNetwork
-    assert not hasattr(NNCFNetwork, "export"), "NNCFNetwork should not contain 'export', since it is defined in BaseDetector"
+def unwrap_module_from_nncf_if_required(module):
+    if not is_nncf_enabled():
+        return module
+    if isinstance(module, NNCFNetwork):
+        return module.get_nncf_wrapped_model()
+    return module
 
 class MMInitializeDataLoader(class_InitializingDataLoader):
     def get_inputs(self, dataloader_output):
@@ -67,7 +70,6 @@ def wrap_nncf_model(model, cfg, data_loader_for_init=None, get_fake_input_func=N
     -- cannot import this function here explicitly
     """
     check_nncf_is_enabled()
-    check_NNCFNetwork_is_compatible()
     pathlib.Path(cfg.work_dir).mkdir(parents=True, exist_ok=True)
     nncf_config = NNCFConfig(cfg.nncf_config)
     logger = get_root_logger(cfg.log_level)

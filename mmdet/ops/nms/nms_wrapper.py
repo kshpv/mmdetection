@@ -64,7 +64,6 @@ def nms(dets, iou_thr, score_thr=0.0, max_num=-1, device_id=None):
 def nms_core(dets, iou_thr, score_thr, max_num):
     if is_in_onnx_export():
         with no_nncf_trace():
-            #valid_mask = scores > score_thr
             valid_dets_mask = dets[:, 4] > score_thr
         dets = dets[valid_dets_mask]
 
