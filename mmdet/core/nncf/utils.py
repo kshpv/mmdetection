@@ -63,7 +63,7 @@ class MMInitializeDataLoader(class_InitializingDataLoader):
         return dataloader_output["gt_bboxes"], dataloader_output["gt_labels"]
 
 def wrap_nncf_model(model, cfg, data_loader_for_init=None, get_fake_input_func=None,
-                    should_use_dummy_forward_with_export_part=True):
+                    should_use_dummy_forward_with_export_part=False):
     """
     The function wraps mmdet model by NNCF
     Note that the parameter `get_fake_input_func` should be the function `get_fake_input`
@@ -88,7 +88,7 @@ def wrap_nncf_model(model, cfg, data_loader_for_init=None, get_fake_input_func=N
     else:
         resuming_state_dict = None
 
-    def __get_fake_data_for_forward_export(cfg, nncf_config, get_fake_input_func):
+    def __get_fake_data_for_forward(cfg, nncf_config, get_fake_input_func):
         # based on the method `export` of BaseDetector from mmdet/models/detectors/base.py
         # and on the script tools/export.py
         assert get_fake_input_func is not None
@@ -105,23 +105,25 @@ def wrap_nncf_model(model, cfg, data_loader_for_init=None, get_fake_input_func=N
         # NB: the full cfg is required here!
         fake_data = get_fake_input_func(cfg, orig_img_shape=orig_img_shape, device=device)
         return fake_data
-    def _get_fake_data_for_forward_export():
+    def _get_fake_data_for_forward():
         # make a closure to use config and get_fake_input_func from the external scope
         cfg_copy = deepcopy(cfg)
         nncf_config = NNCFConfig(cfg_copy.nncf_config)
-        return __get_fake_data_for_forward_export(cfg_copy, nncf_config, get_fake_input_func)
+        return __get_fake_data_for_forward(cfg_copy, nncf_config, get_fake_input_func)
 
     def dummy_forward_without_export_part(model):
-        input_size = nncf_config.get("input_info").get('sample_size')
-        device = next(model.parameters()).device
-        input_args = ([torch.randn(input_size).to(device), ],)
-        input_kwargs = dict(return_loss=False, dummy_forward=True)
-        model(*input_args, **input_kwargs)
+        # based on the method `export` of BaseDetector from mmdet/models/detectors/base.py
+        # and on the script tools/export.py
+        fake_data = _get_fake_data_for_forward()
+        img = fake_data["img"]
+        img_metas = fake_data["img_metas"]
+        with model.forward_dummy_context(img_metas):
+            model(img)
 
     def dummy_forward_with_export_part(model):
         # based on the method `export` of BaseDetector from mmdet/models/detectors/base.py
         # and on the script tools/export.py
-        fake_data = _get_fake_data_for_forward_export()
+        fake_data = _get_fake_data_for_forward()
         img = fake_data["img"]
         img_metas = fake_data["img_metas"]
         with model.forward_export_context(img_metas):
