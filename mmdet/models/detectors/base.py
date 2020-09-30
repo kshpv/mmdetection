@@ -187,11 +187,23 @@ class BaseDetector(nn.Module, metaclass=ABCMeta):
 
     @contextmanager
     def forward_export_context(self, img_metas):
-        assert self.img_metas is None and self.forward_backup is None, "Error: forward_export_context inside forward_export_context"
+        assert self.img_metas is None and self.forward_backup is None, "Error: one forward context inside another forward context"
 
         self.img_metas = img_metas
         self.forward_backup = self.forward
         self.forward = partial(self.forward, return_loss=False, forward_export=True, img_metas=None)
+        yield
+        self.forward = self.forward_backup
+        self.forward_backup = None
+        self.img_metas = None
+
+    @contextmanager
+    def forward_dummy_context(self, img_metas):
+        assert self.img_metas is None and self.forward_backup is None, "Error: one forward context inside another forward context"
+
+        self.img_metas = img_metas
+        self.forward_backup = self.forward
+        self.forward = partial(self.forward, return_loss=False, dummy_forward=True, img_metas=None)
         yield
         self.forward = self.forward_backup
         self.forward_backup = None
