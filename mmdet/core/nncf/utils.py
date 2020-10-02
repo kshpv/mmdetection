@@ -129,9 +129,16 @@ def wrap_nncf_model(model, cfg, data_loader_for_init=None, get_fake_input_func=N
         with model.forward_export_context(img_metas):
             model(img)
 
+    if "nncf_should_use_dummy_forward_with_export_part" in cfg:
+        # TODO: this parameter is for debugging, remove it later
+        should_use_dummy_forward_with_export_part = cfg.get("nncf_should_use_dummy_forward_with_export_part")
+        logger.info(f"set should_use_dummy_forward_with_export_part={should_use_dummy_forward_with_export_part}")
+
     if should_use_dummy_forward_with_export_part:
+        logger.info(f"dummy_forward = dummy_forward_with_export_part")
         dummy_forward = dummy_forward_with_export_part
     else:
+        logger.info(f"dummy_forward = dummy_forward_without_export_part")
         dummy_forward = dummy_forward_without_export_part
 
     model.dummy_forward_fn = dummy_forward
