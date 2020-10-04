@@ -34,6 +34,7 @@ if is_nncf_enabled():
         from nncf.utils import get_all_modules
         from nncf.dynamic_graph.context import no_nncf_trace as original_no_nncf_trace
         from nncf.nncf_network import NNCFNetwork
+        from nncf.dynamic_graph.context import get_current_context
 
         class_InitializingDataLoader = InitializingDataLoader
     except:
@@ -195,3 +196,13 @@ def no_nncf_trace():
     if is_nncf_enabled():
         return original_no_nncf_trace()
     return nullcontext()
+
+def is_in_nncf_tracing():
+    if not is_nncf_enabled():
+        return False
+
+    ctx = get_current_context()
+
+    if ctx is None:
+        return False
+    return ctx.is_tracing
