@@ -166,7 +166,12 @@ def batched_nms(bboxes, scores, inds, nms_cfg, class_agnostic=False):
     else:
         max_coordinate = bboxes.max()
         offsets = inds.to(bboxes) * (max_coordinate + 1)
-        bboxes_for_nms = bboxes + offsets[:, None]
+
+        with no_nncf_trace():
+            # NB: this trick is required to make class-separate NMS using ONNX NMS operation;
+            #     the ONNX NMS operation supports another way of class separation (class-separate scores), but this is not used here.
+            # TODO: check if it is possible in this architecture use class-separate scores that are supported in ONNX NMS.
+            bboxes_for_nms = bboxes + offsets[:, None]
     nms_type = nms_cfg_.pop('type', 'nms')
     nms_op = eval(nms_type)
     dets, keep = nms_op(

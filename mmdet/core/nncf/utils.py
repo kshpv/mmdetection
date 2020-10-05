@@ -34,6 +34,7 @@ if is_nncf_enabled():
         from nncf.utils import get_all_modules
         from nncf.dynamic_graph.context import no_nncf_trace as original_no_nncf_trace
         from nncf.nncf_network import NNCFNetwork
+        from nncf.dynamic_graph.context import get_current_context
 
         class_InitializingDataLoader = InitializingDataLoader
     except:
@@ -63,7 +64,7 @@ class MMInitializeDataLoader(class_InitializingDataLoader):
         return dataloader_output["gt_bboxes"], dataloader_output["gt_labels"]
 
 def wrap_nncf_model(model, cfg, data_loader_for_init=None, get_fake_input_func=None,
-                    should_use_dummy_forward_with_export_part=False):
+                    should_use_dummy_forward_with_export_part=True):
     """
     The function wraps mmdet model by NNCF
     Note that the parameter `get_fake_input_func` should be the function `get_fake_input`
@@ -129,9 +130,16 @@ def wrap_nncf_model(model, cfg, data_loader_for_init=None, get_fake_input_func=N
         with model.forward_export_context(img_metas):
             model(img)
 
+    if "nncf_should_use_dummy_forward_with_export_part" in cfg:
+        # TODO: this parameter is for debugging, remove it later
+        should_use_dummy_forward_with_export_part = cfg.get("nncf_should_use_dummy_forward_with_export_part")
+        logger.info(f"set should_use_dummy_forward_with_export_part={should_use_dummy_forward_with_export_part}")
+
     if should_use_dummy_forward_with_export_part:
+        logger.info(f"dummy_forward = dummy_forward_with_export_part")
         dummy_forward = dummy_forward_with_export_part
     else:
+        logger.info(f"dummy_forward = dummy_forward_without_export_part")
         dummy_forward = dummy_forward_without_export_part
 
     model.dummy_forward_fn = dummy_forward
@@ -188,3 +196,13 @@ def no_nncf_trace():
     if is_nncf_enabled():
         return original_no_nncf_trace()
     return nullcontext()
+
+def is_in_nncf_tracing():
+    if not is_nncf_enabled():
+        return False
+
+    ctx = get_current_context()
+
+    if ctx is None:
+        return False
+    return ctx.is_tracing
