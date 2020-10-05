@@ -64,7 +64,7 @@ class MMInitializeDataLoader(class_InitializingDataLoader):
         return dataloader_output["gt_bboxes"], dataloader_output["gt_labels"]
 
 def wrap_nncf_model(model, cfg, data_loader_for_init=None, get_fake_input_func=None,
-                    should_use_dummy_forward_with_export_part=False):
+                    should_use_dummy_forward_with_export_part=True):
     """
     The function wraps mmdet model by NNCF
     Note that the parameter `get_fake_input_func` should be the function `get_fake_input`
