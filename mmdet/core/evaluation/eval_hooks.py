@@ -12,12 +12,14 @@ class EvalHook(Hook):
         interval (int): Evaluation interval (by epochs). Default: 1.
     """
 
-    def __init__(self, dataloader, interval=1, **eval_kwargs):
+    def __init__(self, dataloader, interval=1,
+                 should_evaluate_before_run=True, **eval_kwargs):
         if not isinstance(dataloader, DataLoader):
             raise TypeError('dataloader must be a pytorch DataLoader, but got'
                             f' {type(dataloader)}')
         self.dataloader = dataloader
         self.interval = interval
+        self.should_evaluate_before_run = should_evaluate_before_run
         self.eval_kwargs = eval_kwargs
 
     def after_train_epoch(self, runner):
@@ -28,6 +30,9 @@ class EvalHook(Hook):
         self.evaluate(runner, results)
 
     def before_run(self, runner):
+        if not self.should_evaluate_before_run:
+            return
+
         from mmdet.apis import single_gpu_test
         results = single_gpu_test(runner.model, self.dataloader, show=False)
         self.evaluate(runner, results)
@@ -56,6 +61,7 @@ class DistEvalHook(EvalHook):
                  dataloader,
                  interval=1,
                  gpu_collect=False,
+                 should_evaluate_before_run=True,
                  **eval_kwargs):
         if not isinstance(dataloader, DataLoader):
             raise TypeError('dataloader must be a pytorch DataLoader, but got '
@@ -63,9 +69,13 @@ class DistEvalHook(EvalHook):
         self.dataloader = dataloader
         self.interval = interval
         self.gpu_collect = gpu_collect
+        self.should_evaluate_before_run = should_evaluate_before_run
         self.eval_kwargs = eval_kwargs
 
     def before_run(self, runner):
+        if not self.should_evaluate_before_run:
+            return
+
         from mmdet.apis import multi_gpu_test
         results = multi_gpu_test(
             runner.model,
