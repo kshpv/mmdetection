@@ -32,7 +32,9 @@ from mmdet.utils.deployment.symbolic import register_extra_symbolics
 from mmdet.utils.deployment.tracer_stubs import AnchorsGridGeneratorStub, ROIFeatureExtractorStub
 from mmdet.apis import get_fake_input
 
-from mmdet.core.nncf import wrap_nncf_model, check_nncf_is_enabled, unwrap_module_from_nncf_if_required
+from mmdet.core.nncf import wrap_nncf_model, check_nncf_is_enabled, unwrap_nncf_model
+
+
 
 def export_to_onnx(model,
                    data,
@@ -152,12 +154,13 @@ def export_to_openvino(cfg, onnx_model_path, output_dir_path, input_shape=None, 
               'openvino/bin/setupvars.sh before running this script.')
         return
 
+    # command_line += ' --static_shape'
     print(command_line)
     run(command_line, shell=True, check=True)
 
 
 def stub_anchor_generator(model, anchor_head_name):
-    model = unwrap_module_from_nncf_if_required(model)
+    model = unwrap_nncf_model(model)
     anchor_head = getattr(model, anchor_head_name, None)
     if anchor_head is not None and isinstance(anchor_head, AnchorHead):
         anchor_generator = anchor_head.anchor_generator
@@ -189,7 +192,7 @@ def stub_anchor_generator(model, anchor_head_name):
 
 
 def stub_roi_feature_extractor(model, extractor_name):
-    model = unwrap_module_from_nncf_if_required(model)
+    model = unwrap_nncf_model(model)
     if hasattr(model, extractor_name):
         extractor = getattr(model, extractor_name)
         if isinstance(extractor, SingleRoIExtractor):

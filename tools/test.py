@@ -31,6 +31,7 @@ def load_checkpoint_state_dict(filename):
         raise RuntimeError('No state_dict found in checkpoint file {}'.format(filename))
     return state_dict
 
+
 def parse_args():
     parser = argparse.ArgumentParser(
         description='MMDet test (and eval) a model')
@@ -135,7 +136,7 @@ def main():
     if cfg.get('nncf_config'):
         check_nncf_is_enabled()
         cfg.nncf_load_from = args.checkpoint
-        model.cuda() # for wrap_nncf_model
+        model.cuda()  # for wrap_nncf_model
         _, model = wrap_nncf_model(model, cfg, None, get_fake_input)
         checkpoint = load_checkpoint_state_dict(args.checkpoint)
         # FIXME: TODO: check why checkpoint does not have "meta" inside
