@@ -13,7 +13,8 @@ class EvalHook(Hook):
     """
 
     def __init__(self, dataloader, interval=1,
-                 should_evaluate_before_run=True, **eval_kwargs):
+                 should_evaluate_before_run=False,
+                 **eval_kwargs):
         if not isinstance(dataloader, DataLoader):
             raise TypeError('dataloader must be a pytorch DataLoader, but got'
                             f' {type(dataloader)}')
@@ -61,7 +62,7 @@ class DistEvalHook(EvalHook):
                  dataloader,
                  interval=1,
                  gpu_collect=False,
-                 should_evaluate_before_run=True,
+                 should_evaluate_before_run=False,
                  **eval_kwargs):
         if not isinstance(dataloader, DataLoader):
             raise TypeError('dataloader must be a pytorch DataLoader, but got '
