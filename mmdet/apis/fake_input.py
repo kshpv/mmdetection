@@ -14,6 +14,7 @@
 #
 
 import numpy as np
+import torch
 from mmcv.parallel import collate, scatter
 from mmdet.parallel.data_cpu import scatter_cpu
 
