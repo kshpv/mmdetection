@@ -80,9 +80,6 @@ class ModelOpenVINO:
         self.configure_inputs(required_inputs)
         self.configure_outputs(required_outputs)
 
-        if 'CPU' in device:
-            self.check_cpu_support(ie, self.net)
-
         logging.info('Loading network to plugin...')
         self.max_num_requests = max_num_requests
         self.exec_net = ie.load_network(network=self.net, device_name=device, num_requests=max_num_requests)
@@ -205,7 +202,7 @@ class DetectorOpenVINO(ModelOpenVINO):
         self.with_detection_output = False
         self.with_mask = False
         super().__init__(*args,
-                         required_inputs=('image', ),
+                         required_inputs=('image',),
                          required_outputs=None,
                          **kwargs)
         self.n, self.c, self.h, self.w = self.net.input_info['image'].input_data.shape
