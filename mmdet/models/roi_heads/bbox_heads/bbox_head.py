@@ -8,6 +8,7 @@ from mmdet.core import (auto_fp16, build_bbox_coder, force_fp32, multi_apply,
 from mmdet.models.builder import HEADS, build_loss
 from mmdet.models.losses import accuracy
 
+from ....core.nncf.utils import no_nncf_trace
 
 @HEADS.register_module()
 class BBoxHead(nn.Module):
@@ -170,16 +171,18 @@ class BBoxHead(nn.Module):
                     pos_bbox_pred = bbox_pred.view(
                         bbox_pred.size(0), 4)[pos_inds.type(torch.bool)]
                 else:
-                    pos_bbox_pred = bbox_pred.view(
-                        bbox_pred.size(0), -1,
-                        4)[pos_inds.type(torch.bool),
-                           labels[pos_inds.type(torch.bool)]]
-                losses['loss_bbox'] = self.loss_bbox(
-                    pos_bbox_pred,
-                    bbox_targets[pos_inds.type(torch.bool)],
-                    bbox_weights[pos_inds.type(torch.bool)],
-                    avg_factor=bbox_targets.size(0),
-                    reduction_override=reduction_override)
+                    with no_nncf_trace():
+                        pos_bbox_pred = bbox_pred.view(
+                            bbox_pred.size(0), -1,
+                            4)[pos_inds.type(torch.bool),
+                               labels[pos_inds.type(torch.bool)]]
+                with no_nncf_trace():
+                    losses['loss_bbox'] = self.loss_bbox(
+                        pos_bbox_pred,
+                        bbox_targets[pos_inds.type(torch.bool)],
+                        bbox_weights[pos_inds.type(torch.bool)],
+                        avg_factor=bbox_targets.size(0),
+                        reduction_override=reduction_override)
             else:
                 losses['loss_bbox'] = bbox_pred.sum() * 0
         return losses
