@@ -95,21 +95,6 @@ class ModelOpenVINO:
             if classes is not None:
                 self.pt_model.CLASSES = classes
 
-    @staticmethod
-    def check_cpu_support(ie, net):
-        logging.info('Check that all layers are supported...')
-        supported_layers = ie.query_network(net, 'CPU')
-        not_supported_layers = [l for l in net.layers.keys() if l not in supported_layers]
-        if len(not_supported_layers) != 0:
-            unsupported_info = '\n\t'.join('{} ({} with params {})'.format(layer_id,
-                                                                           net.layers[layer_id].type,
-                                                                           str(net.layers[layer_id].params))
-                                           for layer_id in not_supported_layers)
-            logging.warning('Following layers are not supported '
-                            'by the CPU plugin:\n\t{}'.format(unsupported_info))
-            logging.warning('Please try to specify cpu extensions library path.')
-            raise ValueError('Some of the layers are not supported.')
-
     def get_mapping(self, mapping_file_path=None):
         mapping = {}
         if mapping_file_path is not None:
