@@ -7,7 +7,6 @@ import torch
 from mmcv import Config, DictAction
 from mmcv.parallel import MMDataParallel, MMDistributedDataParallel
 from mmcv.runner import get_dist_info, init_dist, load_checkpoint
-from tools.fuse_conv_bn import fuse_module
 
 from mmdet.apis import multi_gpu_test, single_gpu_test
 from mmdet.core import wrap_fp16_model
@@ -145,7 +144,8 @@ def main():
         if fp16_cfg is not None:
             wrap_fp16_model(model)
         checkpoint = load_checkpoint(model, args.checkpoint, map_location='cpu')
-        if args.fuse_conv_bn:
+        if args.fuse_conv_bn: #TODO: FIXME: should it be inside this 'else' branch???
+            from tools.fuse_conv_bn import fuse_module
             model = fuse_module(model)
 
     # old versions did not save class info in checkpoints, this walkaround is
@@ -177,11 +177,15 @@ def main():
         if args.out:
             print(f'\nwriting results to {args.out}')
             mmcv.dump(outputs, args.out)
-        kwargs = {} if args.options is None else args.options
+        kwargs = cfg.get('evaluation', {})
+        kwargs.pop('interval', None)
+        kwargs.pop('gpu_collect', None)
+        kwargs.update({} if args.options is None else args.options)
+        kwargs['metric'] = args.eval
         if args.format_only:
             dataset.format_results(outputs, **kwargs)
         if args.eval:
-            dataset.evaluate(outputs, args.eval, test_cfg=cfg.test_cfg, **kwargs)
+            dataset.evaluate(outputs, **kwargs)
 
 
 if __name__ == '__main__':

@@ -156,7 +156,8 @@ def train_detector(model,
             dist=distributed,
             shuffle=False)
         eval_cfg = cfg.get('evaluation', {})
-        eval_cfg['test_cfg'] = cfg.get('test_cfg', {})
+        if "should_evaluate_before_run" not in eval_cfg:
+            eval_cfg["should_evaluate_before_run"] = cfg.ENABLE_COMPRESSION
         eval_hook = DistEvalHook if distributed else EvalHook
         runner.register_hook(eval_hook(val_dataloader, **eval_cfg))
 
