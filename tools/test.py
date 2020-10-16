@@ -18,6 +18,7 @@ from mmdet.parallel import MMDataCPU
 from mmdet.core.nncf import wrap_nncf_model, check_nncf_is_enabled
 from mmdet.apis import get_fake_input
 
+
 def load_checkpoint_state_dict(filename):
     # this code is the common part of mmcv.runner.load_checkpoint and nncf.load_state
     checkpoint = torch.load(filename, map_location=None)
@@ -135,7 +136,8 @@ def main():
     if cfg.get('nncf_config'):
         check_nncf_is_enabled()
         cfg.nncf_load_from = args.checkpoint
-        model.cuda()  # for wrap_nncf_model
+        if torch.cuda.is_available():
+            model = model.cuda()
         _, model = wrap_nncf_model(model, cfg, None, get_fake_input)
         checkpoint = load_checkpoint_state_dict(args.checkpoint)
         # FIXME: TODO: check why checkpoint does not have "meta" inside
@@ -144,7 +146,7 @@ def main():
         if fp16_cfg is not None:
             wrap_fp16_model(model)
         checkpoint = load_checkpoint(model, args.checkpoint, map_location='cpu')
-        if args.fuse_conv_bn: #TODO: FIXME: should it be inside this 'else' branch???
+        if args.fuse_conv_bn:  # TODO: FIXME: should it be inside this 'else' branch???
             from tools.fuse_conv_bn import fuse_module
             model = fuse_module(model)
 
