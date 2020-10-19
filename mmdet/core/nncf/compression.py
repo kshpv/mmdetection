@@ -7,6 +7,7 @@ if is_nncf_enabled():
     try:
         from nncf.initialization import InitializingDataLoader
         from nncf.structures import QuantizationRangeInitArgs
+        from nncf.dynamic_graph.patch_pytorch import nncf_model_input
 
         from nncf import NNCFConfig
         from nncf import load_state
@@ -84,6 +85,7 @@ def wrap_nncf_model(model, cfg, data_loader_for_init=None, get_fake_input_func=N
         # and on the script tools/export.py
         fake_data = _get_fake_data_for_forward(cfg, nncf_config, get_fake_input_func)
         img, img_metas = fake_data["img"], fake_data["img_metas"]
+        img = nncf_model_input(img)
         with model.forward_dummy_context(img_metas):
             model(img)
 
@@ -92,6 +94,7 @@ def wrap_nncf_model(model, cfg, data_loader_for_init=None, get_fake_input_func=N
         # and on the script tools/export.py
         fake_data = _get_fake_data_for_forward(cfg, nncf_config, get_fake_input_func)
         img, img_metas = fake_data["img"], fake_data["img_metas"]
+        img = nncf_model_input(img)
         with model.forward_export_context(img_metas):
             model(img)
 
