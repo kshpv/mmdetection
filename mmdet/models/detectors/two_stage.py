@@ -6,6 +6,8 @@ import torch.nn as nn
 from ..builder import DETECTORS, build_backbone, build_head, build_neck
 from .base import BaseDetector
 
+from ...core.nncf.utils import no_nncf_trace
+
 
 @DETECTORS.register_module()
 class TwoStageDetector(BaseDetector):
@@ -188,6 +190,7 @@ class TwoStageDetector(BaseDetector):
         assert self.with_bbox, 'Bbox head must be implemented.'
 
         x = self.extract_feat(img)
+
 
         if proposals is None:
             proposal_list = self.rpn_head.simple_test_rpn(x, img_metas)

@@ -8,6 +8,8 @@ from mmdet.core import (bbox2roi, bbox_mapping, merge_aug_bboxes,
 
 from mmdet.core.utils.misc import dummy_pad
 
+from ...core.nncf import no_nncf_trace
+
 logger = logging.getLogger(__name__)
 
 if sys.version_info >= (3, 7):
@@ -58,7 +60,8 @@ class BBoxTestMixin(object):
                            rcnn_test_cfg,
                            rescale=False):
         """Test only det bboxes without augmentation."""
-        rois = bbox2roi(proposals)
+        with no_nncf_trace():
+            rois = bbox2roi(proposals)
         bbox_results = self._bbox_forward(x, rois)
         img_shape = img_metas[0]['img_shape']
         scale_factor = img_metas[0]['scale_factor']

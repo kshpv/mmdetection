@@ -9,6 +9,7 @@ from mmdet.core.bbox.transforms import bbox2result
 from mmdet.core.mask.transforms import mask2result
 import numpy as np
 
+from ...core.nncf.utils import no_nncf_trace
 
 @HEADS.register_module()
 class StandardRoIHead(BaseRoIHead, BBoxTestMixin, MaskTestMixin):
@@ -117,16 +118,18 @@ class StandardRoIHead(BaseRoIHead, BBoxTestMixin, MaskTestMixin):
         losses = dict()
         # bbox head forward and loss
         if self.with_bbox:
-            bbox_results = self._bbox_forward_train(x, sampling_results,
-                                                    gt_bboxes, gt_labels,
-                                                    img_metas)
+            with no_nncf_trace():
+                bbox_results = self._bbox_forward_train(x, sampling_results,
+                                                        gt_bboxes, gt_labels,
+                                                        img_metas)
             losses.update(bbox_results['loss_bbox'])
 
         # mask head forward and loss
         if self.with_mask:
-            mask_results = self._mask_forward_train(x, sampling_results,
-                                                    bbox_results['bbox_feats'],
-                                                    gt_masks, img_metas)
+            with no_nncf_trace():
+                mask_results = self._mask_forward_train(x, sampling_results,
+                                                        bbox_results['bbox_feats'],
+                                                        gt_masks, img_metas)
             # TODO: Support empty tensor input. #2280
             if mask_results['loss_mask'] is not None:
                 losses.update(mask_results['loss_mask'])

@@ -5,6 +5,7 @@ from mmcv.cnn import ConvModule, xavier_init
 from mmdet.core import auto_fp16
 from ..builder import NECKS
 
+from ...core.nncf import no_nncf_trace
 
 @NECKS.register_module()
 class FPN(nn.Module):
@@ -176,13 +177,14 @@ class FPN(nn.Module):
         for i in range(used_backbone_levels - 1, 0, -1):
             # In some cases, fixing `scale factor` (e.g. 2) is preferred, but
             #  it cannot co-exist with `size` in `F.interpolate`.
-            if 'scale_factor' in self.upsample_cfg:
-                laterals[i - 1] += F.interpolate(laterals[i],
-                                                 **self.upsample_cfg)
-            else:
-                prev_shape = laterals[i - 1].shape[2:]
-                laterals[i - 1] += F.interpolate(
-                    laterals[i], size=prev_shape, **self.upsample_cfg)
+            with no_nncf_trace():
+                if 'scale_factor' in self.upsample_cfg:
+                    laterals[i - 1] += F.interpolate(laterals[i],
+                                                     **self.upsample_cfg)
+                else:
+                    prev_shape = laterals[i - 1].shape[2:]
+                    laterals[i - 1] += F.interpolate(
+                        laterals[i], size=prev_shape, **self.upsample_cfg)
 
         # build outputs
         # part 1: from original levels

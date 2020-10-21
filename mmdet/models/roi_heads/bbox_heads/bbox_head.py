@@ -196,31 +196,32 @@ class BBoxHead(nn.Module):
                    scale_factor,
                    rescale=False,
                    cfg=None):
-        if isinstance(cls_score, list):
-            cls_score = sum(cls_score) / float(len(cls_score))
-        scores = F.softmax(cls_score, dim=1) if cls_score is not None else None
+        with no_nncf_trace():
+            if isinstance(cls_score, list):
+                cls_score = sum(cls_score) / float(len(cls_score))
+            scores = F.softmax(cls_score, dim=1) if cls_score is not None else None
 
-        if bbox_pred is not None:
-            bboxes = self.bbox_coder.decode(
-                rois[:, 1:], bbox_pred, max_shape=img_shape)
-        else:
-            bboxes = rois[:, 1:].clone()
-            if img_shape is not None:
-                bboxes[:, [0, 2]].clamp_(min=0, max=img_shape[1])
-                bboxes[:, [1, 3]].clamp_(min=0, max=img_shape[0])
-
-        # Remove data for background.
-        scores = scores[:, :self.num_classes]
-        if not self.reg_class_agnostic:
-            bboxes = bboxes[:, :self.num_classes * 4]
-
-        if rescale:
-            if isinstance(scale_factor, float):
-                bboxes /= scale_factor
+            if bbox_pred is not None:
+                bboxes = self.bbox_coder.decode(
+                    rois[:, 1:], bbox_pred, max_shape=img_shape)
             else:
-                scale_factor = bboxes.new_tensor(scale_factor)
-                bboxes = (bboxes.view(bboxes.size(0), -1, 4) /
-                          scale_factor).view(bboxes.size()[0], -1)
+                bboxes = rois[:, 1:].clone()
+                if img_shape is not None:
+                    bboxes[:, [0, 2]].clamp_(min=0, max=img_shape[1])
+                    bboxes[:, [1, 3]].clamp_(min=0, max=img_shape[0])
+
+            # Remove data for background.
+            scores = scores[:, :self.num_classes]
+            if not self.reg_class_agnostic:
+                bboxes = bboxes[:, :self.num_classes * 4]
+
+            if rescale:
+                if isinstance(scale_factor, float):
+                    bboxes /= scale_factor
+                else:
+                    scale_factor = bboxes.new_tensor(scale_factor)
+                    bboxes = (bboxes.view(bboxes.size(0), -1, 4) /
+                              scale_factor).view(bboxes.size()[0], -1)
 
         if cfg is None:
             return bboxes, scores

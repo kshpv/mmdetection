@@ -27,6 +27,8 @@ from mmdet.datasets import build_dataloader, build_dataset
 from mmdet.datasets.pipelines import Compose
 from mmdet.utils import ExtendedDictAction
 
+# import pydevd_pycharm
+# pydevd_pycharm.settrace('10.249.226.42', port=8080, stdoutToServer=True, stderrToServer=True)
 
 def postprocess(result, img_meta, num_classes=80, rescale=True):
     det_bboxes = result['boxes']

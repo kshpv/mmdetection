@@ -10,6 +10,7 @@ from ..builder import HEADS
 from .anchor_head import AnchorHead
 from .rpn_test_mixin import RPNTestMixin
 
+from ...core.nncf.utils import no_nncf_trace
 
 @HEADS.register_module()
 class RPNHead(RPNTestMixin, AnchorHead):
@@ -98,13 +99,15 @@ class RPNHead(RPNTestMixin, AnchorHead):
         scores = torch.cat(mlvl_scores)
         anchors = torch.cat(mlvl_valid_anchors)
         rpn_bbox_pred = torch.cat(mlvl_bbox_preds)
-        proposals = self.bbox_coder.decode(
-            anchors, rpn_bbox_pred, max_shape=img_shape)
+        with no_nncf_trace():
+            proposals = self.bbox_coder.decode(
+                anchors, rpn_bbox_pred, max_shape=img_shape)
         ids = torch.cat(level_ids)
 
         if cfg.min_bbox_size > 0:
-            w = proposals[:, 2] - proposals[:, 0]
-            h = proposals[:, 3] - proposals[:, 1]
+            with no_nncf_trace():
+                w = proposals[:, 2] - proposals[:, 0]
+                h = proposals[:, 3] - proposals[:, 1]
             valid_inds = torch.nonzero(
                 (w >= cfg.min_bbox_size)
                 & (h >= cfg.min_bbox_size),
