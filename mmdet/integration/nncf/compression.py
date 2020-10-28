@@ -113,16 +113,14 @@ def wrap_nncf_model(model,
         input_size = nncf_config.get("input_info").get('sample_size')
         assert get_fake_input_func is not None
         assert len(input_size) == 4 and input_size[0] == 1
-        orig_img_shape = tuple([input_size[-2:], input_size[1]])
+        H, W, C = input_size[2], input_size[3], input_size[1]
         device = next(model.parameters()).device
-        return get_fake_input_func(cfg, orig_img_shape=orig_img_shape, device=device)
+        return get_fake_input_func(cfg, orig_img_shape=tuple([H, W, C]), device=device)
 
-    def dummy_forward(model, nncf_compress_postprocessing):
+    def dummy_forward(model):
         fake_data = _get_fake_data_for_forward(cfg, nncf_config, get_fake_input_func)
         img, img_metas = fake_data["img"], fake_data["img_metas"]
-        # TODO: Currently I am not sure whether add this wrapping
-        # for idx, tensor in enumerate(img):
-        #     img[idx] = nncf_model_input(tensor)
+        img = nncf_model_input(img)
         if nncf_compress_postprocessing:
             ctx = model.forward_export_context(img_metas)
             logger.debug(f"NNCF will compress a postprocessing part of the model")
@@ -138,7 +136,7 @@ def wrap_nncf_model(model,
     else:
         nncf_compress_postprocessing = False
 
-    model.dummy_forward_fn = dummy_forward(model, nncf_compress_postprocessing)
+    model.dummy_forward_fn = dummy_forward
 
     compression_ctrl, model = create_compressed_model(model,
                                                       nncf_config,
