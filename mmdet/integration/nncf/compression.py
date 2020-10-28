@@ -56,10 +56,13 @@ def is_checkpoint_nncf(path):
     checkpoint was the result of trainning of NNCF-compressed model.
     See the function get_nncf_metadata above.
     """
-    checkpoint = torch.load(path)
-    meta = checkpoint.get('meta', {})
-    nncf_enable_compression = meta.get('nncf_enable_compression', False)
-    return bool(nncf_enable_compression)
+    try:
+        checkpoint = torch.load(path)
+        meta = checkpoint.get('meta', {})
+        nncf_enable_compression = meta.get('nncf_enable_compression', False)
+        return bool(nncf_enable_compression)
+    except FileNotFoundError:
+        return False
 
 
 def wrap_nncf_model(model,
@@ -89,8 +92,7 @@ def wrap_nncf_model(model,
         checkpoint_path = cfg.get('load_from')
         if not is_checkpoint_nncf(checkpoint_path):
             checkpoint_path = None
-            logger.info('Received non-NNCF checkpoint to start training '
-                        '-- initialization of NNCF fields will be done')
+            logger.info('No NNCF checkpoint was detected. Initialization of NNCF-model is running')
     else:
         checkpoint_path = None
 
