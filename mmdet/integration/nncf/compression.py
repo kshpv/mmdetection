@@ -92,7 +92,8 @@ def wrap_nncf_model(model,
         checkpoint_path = cfg.get('load_from')
         if not is_checkpoint_nncf(checkpoint_path):
             checkpoint_path = None
-            logger.info('No NNCF checkpoint was detected. Initialization of NNCF-model is running')
+            logger.info('Received non-NNCF checkpoint to start training '
+                        '-- initialization of NNCF fields will be done')
     else:
         checkpoint_path = None
 
