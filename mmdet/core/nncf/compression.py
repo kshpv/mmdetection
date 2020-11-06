@@ -52,7 +52,7 @@ def wrap_nncf_model(model, cfg, data_loader_for_init=None, get_fake_input_func=N
 
     if data_loader_for_init:
         wrapped_loader = MMInitializeDataLoader(data_loader_for_init)
-        nncf_config = register_default_init_args(nncf_config, wrapped_loader)
+        nncf_config = register_default_init_args(nncf_config, None, wrapped_loader)
     elif not cfg.nncf_load_from:
         raise RuntimeError("Tried to load NNCF checkpoint, but there is no path")
 
