@@ -58,7 +58,7 @@ data = dict(
     val=dict(pipeline=test_pipeline),
     test=dict(pipeline=test_pipeline))
 # optimizer
-optimizer = dict(type='SGD', lr=2e-5, momentum=0.9, weight_decay=5e-4)
+optimizer = dict(type='SGD', lr=2e-4, momentum=0.9, weight_decay=5e-4)
 optimizer_config = dict(_delete_=True)
 
 work_dir = './output'
@@ -66,6 +66,8 @@ load_from = 'http://download.openmmlab.com/mmdetection/v2.0/ssd/ssd300_coco/ssd3
 
 find_unused_parameters = True
 nncf_load_from = None
+
+total_epochs = 1
 
 nncf_config = {
     "input_info": {
