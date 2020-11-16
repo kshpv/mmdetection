@@ -93,7 +93,7 @@ def export_to_onnx(model,
                                   dynamic_axes=dynamic_axes,
                                   keep_initializers_as_inputs=True,
                                   **kwargs
-                )
+                                  )
 
 
 def check_onnx_model(export_name):
@@ -168,6 +168,7 @@ def stub_roi_feature_extractor(model, extractor_name):
             for i in range(len(extractor)):
                 if isinstance(extractor[i], SingleRoIExtractor):
                     extractor[i] = ROIFeatureExtractorStub(extractor[i])
+
 
 def optimize_onnx_graph(onnx_model_path):
     onnx_model = onnx.load(onnx_model_path)

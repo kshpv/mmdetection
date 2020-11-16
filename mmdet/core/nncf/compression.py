@@ -114,6 +114,37 @@ def wrap_nncf_model(model, cfg, data_loader_for_init=None, get_fake_input_func=N
 
     compression_ctrl, model = create_compressed_model(model, nncf_config, dummy_forward_fn=dummy_forward,
                                                       resuming_state_dict=resuming_state_dict)
+    import torch
+    from nncf.utils import no_jit_trace
+    from nncf.quantization.layers import QuantizerExportMode, get_scale_zp_from_input_low_input_high, \
+        ExportQuantizeToONNXQuantDequant, ExportQuantizeToFakeQuantize
+    from functools import partial
+    def run_hacked_export_quantization(self, x: torch.Tensor):
+        with no_jit_trace():
+            input_range = abs(self.scale) + self.eps
+            # todo: take bias into account during input_low/input_high calculation
+            input_low = input_range * self.level_low / self.level_high
+            input_high = input_range
+
+            if self._export_mode == QuantizerExportMode.ONNX_QUANTIZE_DEQUANTIZE_PAIRS:
+                y_scale, y_zero_point = get_scale_zp_from_input_low_input_high(self.level_low,
+                                                                               self.level_high,
+                                                                               input_low,
+                                                                               input_high)
+
+        if self._export_mode == QuantizerExportMode.ONNX_QUANTIZE_DEQUANTIZE_PAIRS:
+            return ExportQuantizeToONNXQuantDequant.apply(x, y_scale, y_zero_point)
+        if self._export_mode == QuantizerExportMode.FAKE_QUANTIZE:
+            x = x / 2.0
+            return ExportQuantizeToFakeQuantize.apply(x, self.levels, input_low, input_high, input_low * 2,
+                                                      input_high * 2)
+        raise RuntimeError
+
+    model.nncf_module.backbone.features.init_block.conv.pre_ops._modules[
+        '0'].op.run_export_quantization = partial(run_hacked_export_quantization,
+                                                  model.nncf_module.backbone.features.init_block.conv.pre_ops._modules[
+                                                      '0'].op)
+
     return compression_ctrl, model
 
 
