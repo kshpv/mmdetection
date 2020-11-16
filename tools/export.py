@@ -91,7 +91,7 @@ def export_to_onnx(model,
                                   dynamic_axes=dynamic_axes,
                                   keep_initializers_as_inputs=True,
                                   **kwargs
-                )
+                                  )
 
 
 def check_onnx_model(export_name):
