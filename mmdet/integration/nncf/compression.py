@@ -1,6 +1,6 @@
 import pathlib
-from functools import partial
 import torch
+from functools import partial
 
 from mmdet.utils import get_root_logger
 from .utils import (check_nncf_is_enabled, get_nncf_version, is_nncf_enabled,
@@ -154,11 +154,21 @@ def wrap_nncf_model(model,
                                                       nncf_config,
                                                       dummy_forward_fn=dummy_forward,
                                                       resuming_state_dict=resuming_state_dict)
+    model = change_export_func_first_conv(model)
+
+    return compression_ctrl, model
+
+
+def change_export_func_first_conv(model):
+    ''' To avoid saturation issue
+    At the moment works only for mobilenet
+    '''
 
     def run_hacked_export_quantization(self, x):
+        from nncf.quantization.layers import (
+            ExportQuantizeToFakeQuantize, ExportQuantizeToONNXQuantDequant,
+            QuantizerExportMode, get_scale_zp_from_input_low_input_high)
         from nncf.utils import no_jit_trace
-        from nncf.quantization.layers import QuantizerExportMode, get_scale_zp_from_input_low_input_high, \
-            ExportQuantizeToONNXQuantDequant, ExportQuantizeToFakeQuantize
         with no_jit_trace():
             input_range = abs(self.scale) + self.eps
             # todo: take bias into account during input_low/input_high calculation
@@ -179,12 +189,17 @@ def wrap_nncf_model(model,
                                                       input_high * 2)
         raise RuntimeError
 
-    model.nncf_module.backbone.features.init_block.conv.pre_ops._modules[
-        '0'].op.run_export_quantization = partial(run_hacked_export_quantization,
-                                                  model.nncf_module.backbone.features.init_block.conv.pre_ops._modules[
-                                                      '0'].op)
-
-    return compression_ctrl, model
+    logger = get_root_logger()
+    orig_model = model.get_nncf_wrapped_model()
+    try:
+        # pylint: disable=protected-access
+        module_ = orig_model.backbone.features.init_block.conv.pre_ops._modules['0']
+    except AttributeError as e:
+        logger.info(f'Cannot change an export function for the first Conv due  {e}')
+        return model
+    module_.op.run_export_quantization = partial(run_hacked_export_quantization, module_.op)
+    logger.info('Change an export function for the first Conv to avoid saturation issue on AVX2, AVX512')
+    return model
 
 
 def get_uncompressed_model(module):
