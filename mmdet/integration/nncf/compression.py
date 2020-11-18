@@ -35,10 +35,6 @@ class MMInitializeDataLoader(class_InitializingDataLoader):
         kwargs = {k: v.data[0] for k, v in dataloader_output.items()}
         return (), kwargs
 
-    # TODO: not tested; need to test
-    def get_target(self, dataloader_output):
-        return dataloader_output['gt_bboxes'], dataloader_output['gt_labels']
-
 
 def get_nncf_metadata():
     """
