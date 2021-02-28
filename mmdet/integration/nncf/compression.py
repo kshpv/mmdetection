@@ -17,6 +17,7 @@ if is_nncf_enabled():
         from nncf.dynamic_graph.input_wrapping import nncf_model_input
         from nncf.initialization import InitializingDataLoader
         from nncf.nncf_network import NNCFNetwork
+        from nncf.dynamic_graph.trace_tensor import TracedTensor
 
         class_InitializingDataLoader = InitializingDataLoader
     except ImportError:
@@ -192,14 +193,15 @@ def wrap_nncf_model(model,
     def wrap_inputs(args, kwargs):
         # during dummy_forward
         if not len(kwargs):
-            args[0][0] = nncf_model_input(args[0][0])
+            if not isinstance(args[0][0], TracedTensor):
+                args[0][0] = nncf_model_input(args[0][0])
             return args, kwargs
 
         # during building original graph
         if not kwargs.get('return_loss') and kwargs.get('forward_export'):
             return args, kwargs
 
-        # during model's forward
+        # during model's forward in export
         assert 'img' in kwargs, 'During model forward img must be in kwargs'
         img = kwargs['img']
         if isinstance(img, list):
@@ -222,7 +224,7 @@ def wrap_nncf_model(model,
                                                       dummy_forward_fn=dummy_forward,
                                                       wrap_inputs_fn=wrap_inputs,
                                                       resuming_state_dict=resuming_state_dict)
-    model = change_export_func_first_conv(model)
+    # model = change_export_func_first_conv(model)
     model.export = export_method.__get__(model)
 
     return compression_ctrl, model
