@@ -8,6 +8,8 @@ from mmdet.core import (auto_fp16, build_bbox_coder, force_fp32, multi_apply,
 from mmdet.models.builder import HEADS, build_loss
 from mmdet.models.losses import accuracy
 
+from mmdet.integration.nncf.utils import no_nncf_trace
+
 
 @HEADS.register_module()
 class BBoxHead(nn.Module):
@@ -147,42 +149,63 @@ class BBoxHead(nn.Module):
              bbox_targets,
              bbox_weights,
              reduction_override=None):
-        losses = dict()
-        if cls_score is not None:
-            avg_factor = max(torch.sum(label_weights > 0).float().item(), 1.)
-            if cls_score.numel() > 0:
-                losses['loss_cls'] = self.loss_cls(
-                    cls_score,
-                    labels,
-                    label_weights,
-                    avg_factor=avg_factor,
-                    reduction_override=reduction_override)
-                losses['acc'] = accuracy(cls_score, labels)
-        if bbox_pred is not None:
-            bg_class_ind = self.num_classes
-            # 0~self.num_classes-1 are FG, self.num_classes is BG
-            pos_inds = (labels >= 0) & (labels < bg_class_ind)
-            # do not perform bounding box regression for BG anymore.
-            if pos_inds.any():
-                if self.reg_decoded_bbox:
-                    bbox_pred = self.bbox_coder.decode(rois[:, 1:], bbox_pred)
-                if self.reg_class_agnostic:
-                    pos_bbox_pred = bbox_pred.view(
-                        bbox_pred.size(0), 4)[pos_inds.type(torch.bool)]
+        with no_nncf_trace():
+            losses = dict()
+            if cls_score is not None:
+                avg_factor = max(torch.sum(label_weights > 0).float().item(), 1.)
+                if cls_score.numel() > 0:
+                    losses['loss_cls'] = self.loss_cls(
+                        cls_score,
+                        labels,
+                        label_weights,
+                        avg_factor=avg_factor,
+                        reduction_override=reduction_override)
+                    losses['acc'] = accuracy(cls_score, labels)
+            if bbox_pred is not None:
+                bg_class_ind = self.num_classes
+                # 0~self.num_classes-1 are FG, self.num_classes is BG
+                pos_inds = (labels >= 0) & (labels < bg_class_ind)
+                # do not perform bounding box regression for BG anymore.
+                # with no_nncf_trace():
+                #     pos_inds_no_traced = torch.tensor(pos_inds)
+                #     labels_no_traced = torch.tensor(labels)
+                # if pos_inds.any():
+                #     if self.reg_decoded_bbox:
+                #         bbox_pred = self.bbox_coder.decode(rois[:, 1:], bbox_pred)
+                #     if self.reg_class_agnostic:
+                #         pos_bbox_pred = bbox_pred.view(
+                #             bbox_pred.size(0), 4)[pos_inds_no_traced.type(torch.bool)]
+                #     else:
+                #         pos_bbox_pred = bbox_pred.view(
+                #             bbox_pred.size(0), -1,
+                #             4)[pos_inds_no_traced.type(torch.bool),
+                #                labels_no_traced[pos_inds_no_traced.type(torch.bool)]]
+                #     losses['loss_bbox'] = self.loss_bbox(
+                #         pos_bbox_pred,
+                #         bbox_targets[pos_inds_no_traced.type(torch.bool)],
+                #         bbox_weights[pos_inds_no_traced.type(torch.bool)],
+                #         avg_factor=bbox_targets.size(0),
+                #         reduction_override=reduction_override)
+                if pos_inds.any():
+                    if self.reg_decoded_bbox:
+                        bbox_pred = self.bbox_coder.decode(rois[:, 1:], bbox_pred)
+                    if self.reg_class_agnostic:
+                        pos_bbox_pred = bbox_pred.view(
+                            bbox_pred.size(0), 4)[pos_inds.type(torch.bool)]
+                    else:
+                        pos_bbox_pred = bbox_pred.view(
+                            bbox_pred.size(0), -1,
+                            4)[pos_inds.type(torch.bool),
+                               labels[pos_inds.type(torch.bool)]]
+                    losses['loss_bbox'] = self.loss_bbox(
+                        pos_bbox_pred,
+                        bbox_targets[pos_inds.type(torch.bool)],
+                        bbox_weights[pos_inds.type(torch.bool)],
+                        avg_factor=bbox_targets.size(0),
+                        reduction_override=reduction_override)
                 else:
-                    pos_bbox_pred = bbox_pred.view(
-                        bbox_pred.size(0), -1,
-                        4)[pos_inds.type(torch.bool),
-                           labels[pos_inds.type(torch.bool)]]
-                losses['loss_bbox'] = self.loss_bbox(
-                    pos_bbox_pred,
-                    bbox_targets[pos_inds.type(torch.bool)],
-                    bbox_weights[pos_inds.type(torch.bool)],
-                    avg_factor=bbox_targets.size(0),
-                    reduction_override=reduction_override)
-            else:
-                losses['loss_bbox'] = bbox_pred.sum() * 0
-        return losses
+                    losses['loss_bbox'] = bbox_pred.sum() * 0
+            return losses
 
     @force_fp32(apply_to=('cls_score', 'bbox_pred'))
     def get_bboxes(self,

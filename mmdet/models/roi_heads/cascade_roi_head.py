@@ -279,7 +279,8 @@ class CascadeRoIHead(BaseRoIHead, BBoxTestMixin, MaskTestMixin):
         img_shape = img_metas[0]['img_shape']
         ori_shape = img_metas[0]['ori_shape']
         scale_factor = img_metas[0]['scale_factor']
-
+        # from mmdet.integration.nncf.utils import no_nncf_trace
+        # with no_nncf_trace():
         # "ms" in variable names means multi-stage
         ms_bbox_result = {}
         ms_segm_result = {}
