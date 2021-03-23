@@ -6,6 +6,7 @@ import torch.nn as nn
 from ..builder import DETECTORS, build_backbone, build_head, build_neck
 from .base import BaseDetector
 
+from ...integration.nncf.utils import no_nncf_trace
 
 @DETECTORS.register_module()
 class TwoStageDetector(BaseDetector):
@@ -186,7 +187,7 @@ class TwoStageDetector(BaseDetector):
                     postprocess=True):
         """Test without augmentation."""
         assert self.with_bbox, 'Bbox head must be implemented.'
-
+        # with no_nncf_trace():
         x = self.extract_feat(img)
 
         if proposals is None:

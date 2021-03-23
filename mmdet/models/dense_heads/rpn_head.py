@@ -84,10 +84,12 @@ class RPNHead(RPNTestMixin, AnchorHead):
                 scores = rpn_cls_score.softmax(dim=1)[:, 1]
             rpn_bbox_pred = rpn_bbox_pred.permute(1, 2, 0).reshape(-1, 4)
             anchors = mlvl_anchors[idx]
-            if cfg.nms_pre > 0:
-                scores, topk_inds = topk(scores, cfg.nms_pre, dim=0)
-                rpn_bbox_pred = rpn_bbox_pred[topk_inds]
-                anchors = anchors[topk_inds]
+            from mmdet.integration.nncf import no_nncf_trace
+            with no_nncf_trace():
+                if cfg.nms_pre > 0:
+                    scores, topk_inds = topk(scores, cfg.nms_pre, dim=0)
+                    rpn_bbox_pred = rpn_bbox_pred[topk_inds]
+                    anchors = anchors[topk_inds]
             mlvl_scores.append(scores)
             mlvl_bbox_preds.append(rpn_bbox_pred)
             mlvl_valid_anchors.append(anchors)

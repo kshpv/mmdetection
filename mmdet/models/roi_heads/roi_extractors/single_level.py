@@ -7,6 +7,7 @@ from mmdet.core.utils.misc import topk
 from mmdet.models.builder import ROI_EXTRACTORS
 from mmdet.utils.deployment.symbolic import py_symbolic
 
+from mmdet.integration.nncf.utils import no_nncf_trace
 
 def adapter(self, feats, rois):
     return ((rois,) + tuple(feats), 
@@ -90,6 +91,7 @@ class SingleRoIExtractor(nn.Module):
         x2 = cx + new_w * 0.5
         y1 = cy - new_h * 0.5
         y2 = cy + new_h * 0.5
+        # with no_nncf_trace():
         new_rois = torch.stack((rois[:, 0], x1, y1, x2, y2), dim=-1)
         return new_rois
     
@@ -119,9 +121,15 @@ class SingleRoIExtractor(nn.Module):
             roi_feats.append(level_feats)
         # Concatenate roi features from different pyramid levels
         # and rearrange them to match original ROIs order.
-        indices = torch.cat(indices, dim=0)
-        k = operators.shape_as_tensor(indices)
-        _, indices = topk(indices, k, dim=0, largest=False)
-        roi_feats = torch.cat(roi_feats, dim=0)[indices]
+        # MASK R-CNN
+        with no_nncf_trace():
+            indices = torch.cat(indices, dim=0)
+            k = operators.shape_as_tensor(indices)
+            _, indices = topk(indices, k, dim=0, largest=False)
+            roi_feats = torch.cat(roi_feats, dim=0)[indices]
+        # indices = torch.cat(indices, dim=0)
+        # k = operators.shape_as_tensor(indices)
+        # _, indices = topk(indices, k, dim=0, largest=False)
+        # roi_feats = torch.cat(roi_feats, dim=0)[indices]
 
         return roi_feats
