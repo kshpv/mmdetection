@@ -7,6 +7,7 @@ from mmdet.core import (bbox2roi, bbox_mapping, merge_aug_bboxes,
                         merge_aug_masks, multiclass_nms)
 
 from mmdet.core.utils.misc import dummy_pad
+from mmdet.integration.nncf.utils import is_in_nncf_tracing
 
 logger = logging.getLogger(__name__)
 
@@ -157,7 +158,7 @@ class MaskTestMixin(object):
         # image shape of the first image in the batch (only one)
         ori_shape = img_metas[0]['ori_shape']
         scale_factor = img_metas[0]['scale_factor']
-        if torch.onnx.is_in_onnx_export() and det_bboxes.shape[0] == 0:
+        if (torch.onnx.is_in_onnx_export() or is_in_nncf_tracing()) and det_bboxes.shape[0] == 0:
             # If there are no detection there is nothing to do for a mask head.
             # But during ONNX export we should run mask head
             # for it to appear in the graph.

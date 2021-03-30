@@ -8,6 +8,7 @@ from mmdet.core import (bbox2result, bbox2roi, bbox_mapping, build_assigner,
                         multiclass_nms)
 from mmdet.core.mask.transforms import mask2result
 from mmdet.core.utils.misc import dummy_pad
+from mmdet.integration.nncf.utils import is_in_nncf_tracing
 from ..builder import HEADS, build_head, build_roi_extractor
 from .base_roi_head import BaseRoIHead
 from .test_mixins import BBoxTestMixin, MaskTestMixin
@@ -310,7 +311,7 @@ class CascadeRoIHead(BaseRoIHead, BBoxTestMixin, MaskTestMixin):
         ms_bbox_result['ensemble'] = (det_bboxes, det_labels)
 
         if self.with_mask:
-            if torch.onnx.is_in_onnx_export() and det_bboxes.shape[0] == 0:
+            if (torch.onnx.is_in_onnx_export() or is_in_nncf_tracing()) and det_bboxes.shape[0] == 0:
                 # If there are no detection there is nothing to do for a mask head.
                 # But during ONNX export we should run mask head
                 # for it to appear in the graph.

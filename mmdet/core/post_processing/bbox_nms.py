@@ -6,7 +6,7 @@ from torch.onnx import is_in_onnx_export
 from torch.onnx.symbolic_opset9 import reshape
 from torch.onnx.symbolic_opset10 import _slice
 
-from mmdet.integration.nncf import no_nncf_trace
+from mmdet.integration.nncf import no_nncf_trace, is_in_nncf_tracing
 from ...ops.nms import batched_nms
 from ...utils.deployment.symbolic import py_symbolic
 from ..utils.misc import dummy_pad, topk
@@ -58,20 +58,21 @@ def multiclass_nms_core(multi_bboxes, multi_scores, score_thr, nms_cfg, max_num=
         bboxes = multi_bboxes[:, None].expand(multi_scores.size(0), num_classes, 4)
     scores = multi_scores
         
-    if is_in_onnx_export():
-        labels = torch.arange(num_classes, dtype=torch.long, device=scores.device) \
-                      .unsqueeze(0) \
-                      .expand_as(scores) \
-                      .reshape(-1)
-        bboxes = bboxes.reshape(-1, 4)
-        scores = scores.reshape(-1)
+    if is_in_onnx_export() or is_in_nncf_tracing():
+        with no_nncf_trace():
+            labels = torch.arange(num_classes, dtype=torch.long, device=scores.device) \
+                          .unsqueeze(0) \
+                          .expand_as(scores) \
+                          .reshape(-1)
+            bboxes = bboxes.reshape(-1, 4)
+            scores = scores.reshape(-1)
 
         assert nms_cfg['type'] == 'nms', 'Only vanilla NMS is compatible with ONNX export'
         nms_cfg['score_thr'] = score_thr
         nms_cfg['max_num'] = max_num if max_num > 0 else sys.maxsize
     else:
-        with no_nncf_trace():
-            valid_mask = scores > score_thr
+
+        valid_mask = scores > score_thr
         bboxes = bboxes[valid_mask]
         scores = scores[valid_mask]
         labels = valid_mask.nonzero()[:, 1]
@@ -85,7 +86,7 @@ def multiclass_nms_core(multi_bboxes, multi_scores, score_thr, nms_cfg, max_num=
     labels = labels[keep]
     dets = torch.cat([dets, labels.to(dets.dtype).unsqueeze(-1)], dim=1)
 
-    if not is_in_onnx_export() and max_num > 0:
+    if not (is_in_onnx_export() or is_in_nncf_tracing()) and max_num > 0:
         dets = dets[:max_num]
 
     return dets

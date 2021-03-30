@@ -5,6 +5,7 @@ from mmcv.cnn import normal_init
 from torch.onnx import is_in_onnx_export
 
 from mmdet.ops import batched_nms
+from mmdet.integration.nncf.utils import is_in_nncf_tracing
 from ...core.utils.misc import topk
 from ..builder import HEADS
 from .anchor_head import AnchorHead
@@ -85,11 +86,11 @@ class RPNHead(RPNTestMixin, AnchorHead):
             rpn_bbox_pred = rpn_bbox_pred.permute(1, 2, 0).reshape(-1, 4)
             anchors = mlvl_anchors[idx]
             from mmdet.integration.nncf import no_nncf_trace
-            with no_nncf_trace():
-                if cfg.nms_pre > 0:
-                    scores, topk_inds = topk(scores, cfg.nms_pre, dim=0)
-                    rpn_bbox_pred = rpn_bbox_pred[topk_inds]
-                    anchors = anchors[topk_inds]
+            # with no_nncf_trace():
+            if cfg.nms_pre > 0:
+                scores, topk_inds = topk(scores, cfg.nms_pre, dim=0)
+                rpn_bbox_pred = rpn_bbox_pred[topk_inds]
+                anchors = anchors[topk_inds]
             mlvl_scores.append(scores)
             mlvl_bbox_preds.append(rpn_bbox_pred)
             mlvl_valid_anchors.append(anchors)
@@ -111,7 +112,7 @@ class RPNHead(RPNTestMixin, AnchorHead):
                 (w >= cfg.min_bbox_size)
                 & (h >= cfg.min_bbox_size),
                 as_tuple=False).squeeze()
-            if valid_inds.sum().item() != len(proposals) or is_in_onnx_export():
+            if valid_inds.sum().item() != len(proposals) or (is_in_onnx_export() or is_in_nncf_tracing()):
                 proposals = proposals[valid_inds, :]
                 scores = scores[valid_inds]
                 ids = ids[valid_inds]

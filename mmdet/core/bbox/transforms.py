@@ -2,11 +2,12 @@ import numpy as np
 import torch
 from torch.onnx import is_in_onnx_export
 
+from mmdet.integration.nncf.utils import is_in_nncf_tracing
 from ..utils.misc import to_numpy
 
 
 def clamp(x, min, max):
-    if is_in_onnx_export():
+    if is_in_onnx_export() or is_in_nncf_tracing():
         is_min_tensor = isinstance(min, torch.Tensor)
         is_max_tensor = isinstance(max, torch.Tensor)
 

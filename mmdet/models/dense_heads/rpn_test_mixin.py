@@ -23,7 +23,9 @@ class RPNTestMixin(object):
 
     def simple_test_rpn(self, x, img_metas):
         rpn_outs = self(x)
-        proposal_list = self.get_bboxes(*rpn_outs, img_metas)
+        from ...integration.nncf.utils import no_nncf_trace
+        with no_nncf_trace():
+            proposal_list = self.get_bboxes(*rpn_outs, img_metas)
         return proposal_list
 
     def aug_test_rpn(self, feats, img_metas):

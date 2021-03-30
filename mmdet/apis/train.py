@@ -95,10 +95,9 @@ def train_detector(model,
     # else:
     #     compression_ctrl = None
 
-    comperssion_lr_scale = 1000
-    models_param_names = set(map(lambda item: 'nncf_module.' + item[0], model.named_parameters()))
-
     if nncf_enable_compression:
+        comperssion_lr_scale = 1
+        models_param_names = set(map(lambda item: 'nncf_module.' + item[0], model.named_parameters()))
         compression_ctrl, model = wrap_nncf_model(model, cfg, data_loaders[0], get_fake_input)
         nncf_model_params = dict(model.named_parameters())
         for name, param in nncf_model_params.items():
@@ -106,7 +105,6 @@ def train_detector(model,
                 param.register_hook(lambda grad: comperssion_lr_scale * grad)
     else:
         compression_ctrl = None
-
 
     map_location = 'default'
     if torch.cuda.is_available():

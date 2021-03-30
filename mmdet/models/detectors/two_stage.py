@@ -166,7 +166,7 @@ class TwoStageDetector(BaseDetector):
                                 img_meta,
                                 proposals=None,
                                 rescale=False):
-        """Async test without augmentation."""
+        """Async test without augm  entation."""
         assert self.with_bbox, 'Bbox head must be implemented.'
         x = self.extract_feat(img)
 
@@ -187,14 +187,11 @@ class TwoStageDetector(BaseDetector):
                     postprocess=True):
         """Test without augmentation."""
         assert self.with_bbox, 'Bbox head must be implemented.'
-        # with no_nncf_trace():
         x = self.extract_feat(img)
-
         if proposals is None:
             proposal_list = self.rpn_head.simple_test_rpn(x, img_metas)
         else:
             proposal_list = proposals
-
         return self.roi_head.simple_test(
             x, proposal_list, img_metas, rescale=rescale, postprocess=postprocess)
 

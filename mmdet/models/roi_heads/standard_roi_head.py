@@ -245,29 +245,30 @@ class StandardRoIHead(BaseRoIHead, BBoxTestMixin, MaskTestMixin):
                     postprocess=True):
         """Test without augmentation."""
         assert self.with_bbox, 'Bbox head must be implemented.'
+        from mmdet.integration.nncf.utils import no_nncf_trace
+        with no_nncf_trace():
+            det_bboxes, det_labels = self.simple_test_bboxes(
+                x, img_metas, proposal_list, self.test_cfg, rescale=False)
 
-        det_bboxes, det_labels = self.simple_test_bboxes(
-            x, img_metas, proposal_list, self.test_cfg, rescale=False)
+            det_masks = None
+            if self.with_mask:
+                det_masks = self.simple_test_mask(
+                    x, img_metas, det_bboxes, det_labels, rescale=False)
 
-        det_masks = None
-        if self.with_mask:
-            det_masks = self.simple_test_mask(
-                x, img_metas, det_bboxes, det_labels, rescale=False)
+            if postprocess:
+                if isinstance(det_masks, tuple): # mask scoring rcnn
+                    det_masks, mask_scores = det_masks
+                    bbox_results, segm_results = self.postprocess(
+                        det_bboxes, det_labels, det_masks, img_metas, rescale=rescale)
+                    return bbox_results, (segm_results, mask_scores)
 
-        if postprocess:
-            if isinstance(det_masks, tuple): # mask scoring rcnn
-                det_masks, mask_scores = det_masks
-                bbox_results, segm_results = self.postprocess(
+                return self.postprocess(
                     det_bboxes, det_labels, det_masks, img_metas, rescale=rescale)
-                return bbox_results, (segm_results, mask_scores)
-                
-            return self.postprocess(
-                det_bboxes, det_labels, det_masks, img_metas, rescale=rescale)
-        else:
-            if det_masks is None:
-                return det_bboxes, det_labels
             else:
-                return det_bboxes, det_labels, det_masks
+                if det_masks is None:
+                    return det_bboxes, det_labels
+                else:
+                    return det_bboxes, det_labels, det_masks
 
     def postprocess(self,
                     det_bboxes,

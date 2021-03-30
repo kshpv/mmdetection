@@ -3,7 +3,7 @@ import sys
 import torch
 from torch.onnx import is_in_onnx_export
 
-from mmdet.integration.nncf import no_nncf_trace
+from mmdet.integration.nncf import no_nncf_trace, is_in_nncf_tracing
 from mmdet.utils.deployment.symbolic import py_symbolic
 from . import nms_ext
 
@@ -61,7 +61,7 @@ def nms(dets, iou_thr, score_thr=0.0, max_num=-1, device_id=None):
 
 @py_symbolic()
 def nms_core(dets, iou_thr, score_thr, max_num):
-    if is_in_onnx_export():
+    if is_in_onnx_export() or is_in_nncf_tracing():
         with no_nncf_trace():
             valid_dets_mask = dets[:, 4] > score_thr
         dets = dets[valid_dets_mask]
@@ -71,7 +71,7 @@ def nms_core(dets, iou_thr, score_thr, max_num):
     else:
         inds = nms_ext.nms(dets, iou_thr)
 
-    if is_in_onnx_export():
+    if is_in_onnx_export() or is_in_nncf_tracing():
         inds = inds[:max_num]
 
     return inds
