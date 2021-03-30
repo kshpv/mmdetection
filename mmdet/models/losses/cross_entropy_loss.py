@@ -123,7 +123,7 @@ def mask_cross_entropy(pred,
     num_rois = pred.size()[0]
     with no_nncf_trace():
         inds = torch.arange(0, num_rois, dtype=torch.long, device=pred.device)
-        label_no_trace = torch.tensor(label)
+        label_no_trace = label.clone().detach()
     pred_slice = pred[inds, label_no_trace].squeeze(1)
     return F.binary_cross_entropy_with_logits(
         pred_slice, target, weight=class_weight, reduction='mean')[None]

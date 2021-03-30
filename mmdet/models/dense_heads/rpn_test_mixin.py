@@ -33,7 +33,9 @@ class RPNTestMixin(object):
             list[Tensor]: Proposals of each image.
         """
         rpn_outs = self(x)
-        proposal_list = self.get_bboxes(*rpn_outs, img_metas)
+        from ...integration.nncf.utils import no_nncf_trace
+        with no_nncf_trace():
+            proposal_list = self.get_bboxes(*rpn_outs, img_metas)
         return proposal_list
 
     def aug_test_rpn(self, feats, img_metas):

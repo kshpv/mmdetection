@@ -248,9 +248,10 @@ class StandardRoIHead(BaseRoIHead, BBoxTestMixin, MaskTestMixin):
                     postprocess=True):
         """Test without augmentation."""
         assert self.with_bbox, 'Bbox head must be implemented.'
-
-        det_bboxes, det_labels = self.simple_test_bboxes(
-            x, img_metas, proposal_list, self.test_cfg, rescale=False)
+        from mmdet.integration.nncf.utils import no_nncf_trace
+        with no_nncf_trace():
+            det_bboxes, det_labels = self.simple_test_bboxes(
+                x, img_metas, proposal_list, self.test_cfg, rescale=False)
 
         det_masks = [None for _ in det_bboxes]
         if self.with_mask:
