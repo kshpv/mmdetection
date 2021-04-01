@@ -8,6 +8,7 @@ from mmdet.core import (bbox2roi, bbox_mapping, merge_aug_bboxes,
 
 from mmdet.core.utils.misc import dummy_pad
 from mmdet.integration.nncf.utils import is_in_nncf_tracing
+from mmdet.integration.nncf.utils import no_nncf_trace, is_in_nncf_tracing
 
 logger = logging.getLogger(__name__)
 
@@ -59,19 +60,22 @@ class BBoxTestMixin(object):
                            rcnn_test_cfg,
                            rescale=False):
         """Test only det bboxes without augmentation."""
-        rois = bbox2roi(proposals)
+        from mmdet.integration.nncf.utils import no_nncf_trace
+        with no_nncf_trace():
+            rois = bbox2roi(proposals)
         bbox_results = self._bbox_forward(x, rois)
         img_shapes = tuple(meta['img_shape'] for meta in img_metas)
         scale_factors = tuple(meta['scale_factor'] for meta in img_metas)
-        if torch.onnx.is_in_onnx_export():
-            det_bboxes, det_labels = self.bbox_head.get_bboxes(
-                rois,
-                bbox_results['cls_score'],
-                bbox_results['bbox_pred'],
-                img_shapes[0],
-                scale_factors[0],
-                rescale=rescale,
-                cfg=rcnn_test_cfg)
+        if torch.onnx.is_in_onnx_export() or is_in_nncf_tracing():
+            with no_nncf_trace():
+                det_bboxes, det_labels = self.bbox_head.get_bboxes(
+                    rois,
+                    bbox_results['cls_score'],
+                    bbox_results['bbox_pred'],
+                    img_shapes[0],
+                    scale_factors[0],
+                    rescale=rescale,
+                    cfg=rcnn_test_cfg)
             return [det_bboxes], [det_labels]
 
         # split batch bbox prediction back to each image
@@ -219,7 +223,7 @@ class MaskTestMixin(object):
                     torch.from_numpy(scale_factor).to(det_bboxes[0].device)
                     for scale_factor in scale_factors
                 ]
-            if torch.onnx.is_in_onnx_export():
+            if torch.onnx.is_in_onnx_export() or is_in_nncf_tracing():
                 # avoid mask_pred.split with static number of prediction
                 mask_preds = []
                 _bboxes = []
