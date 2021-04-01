@@ -7,6 +7,7 @@ from .test_mixins import BBoxTestMixin, MaskTestMixin
 
 from mmdet.core.bbox.transforms import bbox2result
 from mmdet.core.mask.transforms import mask2result
+from mmdet.integration.nncf.utils import no_nncf_trace
 import numpy as np
 
 
@@ -245,16 +246,15 @@ class StandardRoIHead(BaseRoIHead, BBoxTestMixin, MaskTestMixin):
                     postprocess=True):
         """Test without augmentation."""
         assert self.with_bbox, 'Bbox head must be implemented.'
-        from mmdet.integration.nncf.utils import no_nncf_trace
+        det_bboxes, det_labels = self.simple_test_bboxes(
+            x, img_metas, proposal_list, self.test_cfg, rescale=False)
+
+        det_masks = None
+        if self.with_mask:
+            det_masks = self.simple_test_mask(
+                x, img_metas, det_bboxes, det_labels, rescale=False)
+
         with no_nncf_trace():
-            det_bboxes, det_labels = self.simple_test_bboxes(
-                x, img_metas, proposal_list, self.test_cfg, rescale=False)
-
-            det_masks = None
-            if self.with_mask:
-                det_masks = self.simple_test_mask(
-                    x, img_metas, det_bboxes, det_labels, rescale=False)
-
             if postprocess:
                 if isinstance(det_masks, tuple): # mask scoring rcnn
                     det_masks, mask_scores = det_masks

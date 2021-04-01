@@ -8,6 +8,7 @@ from mmdet.core import (bbox2roi, bbox_mapping, merge_aug_bboxes,
 
 from mmdet.core.utils.misc import dummy_pad
 from mmdet.integration.nncf.utils import is_in_nncf_tracing
+from mmdet.integration.nncf.utils import no_nncf_trace
 
 logger = logging.getLogger(__name__)
 
@@ -59,18 +60,21 @@ class BBoxTestMixin(object):
                            rcnn_test_cfg,
                            rescale=False):
         """Test only det bboxes without augmentation."""
-        rois = bbox2roi(proposals)
+        from mmdet.integration.nncf.utils import no_nncf_trace
+        with no_nncf_trace():
+            rois = bbox2roi(proposals)
         bbox_results = self._bbox_forward(x, rois)
         img_shape = img_metas[0]['img_shape']
         scale_factor = img_metas[0]['scale_factor']
-        det_bboxes, det_labels = self.bbox_head.get_bboxes(
-            rois,
-            bbox_results['cls_score'],
-            bbox_results['bbox_pred'],
-            img_shape,
-            scale_factor,
-            rescale=rescale,
-            cfg=rcnn_test_cfg)
+        with no_nncf_trace():
+            det_bboxes, det_labels = self.bbox_head.get_bboxes(
+                rois,
+                bbox_results['cls_score'],
+                bbox_results['bbox_pred'],
+                img_shape,
+                scale_factor,
+                rescale=rescale,
+                cfg=rcnn_test_cfg)
         return det_bboxes, det_labels
 
     def aug_test_bboxes(self, feats, img_metas, proposal_list, rcnn_test_cfg):
@@ -155,35 +159,40 @@ class MaskTestMixin(object):
                          det_bboxes,
                          det_labels,
                          rescale=False):
-        # image shape of the first image in the batch (only one)
-        ori_shape = img_metas[0]['ori_shape']
-        scale_factor = img_metas[0]['scale_factor']
+        with no_nncf_trace():
+            # image shape of the first image in the batch (only one)
+            ori_shape = img_metas[0]['ori_shape']
+            scale_factor = img_metas[0]['scale_factor']
         if (torch.onnx.is_in_onnx_export() or is_in_nncf_tracing()) and det_bboxes.shape[0] == 0:
             # If there are no detection there is nothing to do for a mask head.
             # But during ONNX export we should run mask head
             # for it to appear in the graph.
             # So add one zero / dummy ROI that will be mapped
             # to an Identity op in the graph.
-            det_bboxes = dummy_pad(det_bboxes, (0, 0, 0, 1))
-            det_labels = dummy_pad(det_labels, (0, 1))
+            with no_nncf_trace():
+                det_bboxes = dummy_pad(det_bboxes, (0, 0, 0, 1))
+                det_labels = dummy_pad(det_labels, (0, 1))
 
         if det_bboxes.shape[0] == 0:
-            segm_result = torch.empty([0, 0, 0],
-                                    dtype=det_bboxes.dtype,
-                                    device=det_bboxes.device)
+            with no_nncf_trace():
+                segm_result = torch.empty([0, 0, 0],
+                                        dtype=det_bboxes.dtype,
+                                        device=det_bboxes.device)
         else:
             # if det_bboxes is rescaled to the original image size, we need to
             # rescale it back to the testing scale to obtain RoIs.
-            if rescale and not isinstance(scale_factor, float):
-                scale_factor = torch.from_numpy(scale_factor).to(
-                    det_bboxes.device)
-            _bboxes = (
-                det_bboxes[:, :4] * scale_factor if rescale else det_bboxes)
-            mask_rois = bbox2roi([_bboxes])
+            with no_nncf_trace():
+                if rescale and not isinstance(scale_factor, float):
+                    scale_factor = torch.from_numpy(scale_factor).to(
+                        det_bboxes.device)
+                _bboxes = (
+                    det_bboxes[:, :4] * scale_factor if rescale else det_bboxes)
+                mask_rois = bbox2roi([_bboxes])
             mask_results = self._mask_forward(x, mask_rois)
-            segm_result = self.mask_head.get_seg_masks(
-                mask_results['mask_pred'], _bboxes, det_labels, self.test_cfg,
-                ori_shape, scale_factor, rescale)
+            with no_nncf_trace():
+                segm_result = self.mask_head.get_seg_masks(
+                    mask_results['mask_pred'], _bboxes, det_labels, self.test_cfg,
+                    ori_shape, scale_factor, rescale)
         return segm_result
 
     def aug_test_mask(self, feats, img_metas, det_bboxes, det_labels):
