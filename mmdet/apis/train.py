@@ -90,19 +90,8 @@ def train_detector(model,
 
     # nncf model wrapper
     nncf_enable_compression = bool(cfg.get('nncf_config'))
-    # if nncf_enable_compression:
-    #     compression_ctrl, model = wrap_nncf_model(model, cfg, data_loaders[0], get_fake_input)
-    # else:
-    #     compression_ctrl = None
-
     if nncf_enable_compression:
-        comperssion_lr_scale = 1
-        models_param_names = set(map(lambda item: 'nncf_module.' + item[0], model.named_parameters()))
         compression_ctrl, model = wrap_nncf_model(model, cfg, data_loaders[0], get_fake_input)
-        nncf_model_params = dict(model.named_parameters())
-        for name, param in nncf_model_params.items():
-            if param.requires_grad and name not in models_param_names:
-                param.register_hook(lambda grad: comperssion_lr_scale * grad)
     else:
         compression_ctrl = None
 

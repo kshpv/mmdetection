@@ -166,26 +166,6 @@ class BBoxHead(nn.Module):
                 # 0~self.num_classes-1 are FG, self.num_classes is BG
                 pos_inds = (labels >= 0) & (labels < bg_class_ind)
                 # do not perform bounding box regression for BG anymore.
-                # with no_nncf_trace():
-                #     pos_inds_no_traced = torch.tensor(pos_inds)
-                #     labels_no_traced = torch.tensor(labels)
-                # if pos_inds.any():
-                #     if self.reg_decoded_bbox:
-                #         bbox_pred = self.bbox_coder.decode(rois[:, 1:], bbox_pred)
-                #     if self.reg_class_agnostic:
-                #         pos_bbox_pred = bbox_pred.view(
-                #             bbox_pred.size(0), 4)[pos_inds_no_traced.type(torch.bool)]
-                #     else:
-                #         pos_bbox_pred = bbox_pred.view(
-                #             bbox_pred.size(0), -1,
-                #             4)[pos_inds_no_traced.type(torch.bool),
-                #                labels_no_traced[pos_inds_no_traced.type(torch.bool)]]
-                #     losses['loss_bbox'] = self.loss_bbox(
-                #         pos_bbox_pred,
-                #         bbox_targets[pos_inds_no_traced.type(torch.bool)],
-                #         bbox_weights[pos_inds_no_traced.type(torch.bool)],
-                #         avg_factor=bbox_targets.size(0),
-                #         reduction_override=reduction_override)
                 if pos_inds.any():
                     if self.reg_decoded_bbox:
                         bbox_pred = self.bbox_coder.decode(rois[:, 1:], bbox_pred)

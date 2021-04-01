@@ -91,7 +91,6 @@ class SingleRoIExtractor(nn.Module):
         x2 = cx + new_w * 0.5
         y1 = cy - new_h * 0.5
         y2 = cy + new_h * 0.5
-        # with no_nncf_trace():
         new_rois = torch.stack((rois[:, 0], x1, y1, x2, y2), dim=-1)
         return new_rois
     
@@ -99,37 +98,32 @@ class SingleRoIExtractor(nn.Module):
     @force_fp32(apply_to=('feats', ), out_fp16=True)
     def forward(self, feats, rois, roi_scale_factor=None):
         from torch.onnx import operators
-
-        if len(feats) == 1:
-            return self.roi_layers[0](feats[0], rois)
-
-        num_levels = len(feats)
-        target_lvls = self.map_roi_levels(rois, num_levels)
-        if roi_scale_factor is not None:
-            rois = self.roi_rescale(rois, roi_scale_factor)
-
-        indices = []
-        roi_feats = []
-        for level, (feat, extractor) in enumerate(zip(feats, self.roi_layers)):
-            # Explicit casting to int is required for ONNXRuntime.
-            level_indices = torch.nonzero(
-                (target_lvls == level).int()).view(-1)
-            level_rois = rois[level_indices]
-            indices.append(level_indices)
-
-            level_feats = extractor(feat, level_rois)
-            roi_feats.append(level_feats)
-        # Concatenate roi features from different pyramid levels
-        # and rearrange them to match original ROIs order.
-        # MASK R-CNN
         with no_nncf_trace():
+            if len(feats) == 1:
+                return self.roi_layers[0](feats[0], rois)
+
+            num_levels = len(feats)
+            target_lvls = self.map_roi_levels(rois, num_levels)
+            if roi_scale_factor is not None:
+                rois = self.roi_rescale(rois, roi_scale_factor)
+
+            indices = []
+            roi_feats = []
+            for level, (feat, extractor) in enumerate(zip(feats, self.roi_layers)):
+                # Explicit casting to int is required for ONNXRuntime.
+                level_indices = torch.nonzero(
+                    (target_lvls == level).int()).view(-1)
+                level_rois = rois[level_indices]
+                indices.append(level_indices)
+
+                level_feats = extractor(feat, level_rois)
+                roi_feats.append(level_feats)
+            # Concatenate roi features from different pyramid levels
+            # and rearrange them to match original ROIs order.
+            # MASK R-CNN
             indices = torch.cat(indices, dim=0)
             k = operators.shape_as_tensor(indices)
             _, indices = topk(indices, k, dim=0, largest=False)
             roi_feats = torch.cat(roi_feats, dim=0)[indices]
-        # indices = torch.cat(indices, dim=0)
-        # k = operators.shape_as_tensor(indices)
-        # _, indices = topk(indices, k, dim=0, largest=False)
-        # roi_feats = torch.cat(roi_feats, dim=0)[indices]
 
         return roi_feats

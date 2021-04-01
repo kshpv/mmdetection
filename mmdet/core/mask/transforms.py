@@ -20,7 +20,6 @@ from ..utils.misc import to_numpy
 import torch
 import torch.nn.functional as F
 
-from mmdet.integration.nncf.utils import no_nncf_trace
 
 def mask2result(det_bboxes,
                 det_labels,

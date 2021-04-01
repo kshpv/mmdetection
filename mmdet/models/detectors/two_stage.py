@@ -6,7 +6,6 @@ import torch.nn as nn
 from ..builder import DETECTORS, build_backbone, build_head, build_neck
 from .base import BaseDetector
 
-from ...integration.nncf.utils import no_nncf_trace
 
 @DETECTORS.register_module()
 class TwoStageDetector(BaseDetector):
@@ -166,7 +165,7 @@ class TwoStageDetector(BaseDetector):
                                 img_meta,
                                 proposals=None,
                                 rescale=False):
-        """Async test without augm  entation."""
+        """Async test without augmentation."""
         assert self.with_bbox, 'Bbox head must be implemented.'
         x = self.extract_feat(img)
 

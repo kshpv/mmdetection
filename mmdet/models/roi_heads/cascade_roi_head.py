@@ -9,6 +9,7 @@ from mmdet.core import (bbox2result, bbox2roi, bbox_mapping, build_assigner,
 from mmdet.core.mask.transforms import mask2result
 from mmdet.core.utils.misc import dummy_pad
 from mmdet.integration.nncf.utils import is_in_nncf_tracing
+from mmdet.integration.nncf.utils import no_nncf_trace
 from ..builder import HEADS, build_head, build_roi_extractor
 from .base_roi_head import BaseRoIHead
 from .test_mixins import BBoxTestMixin, MaskTestMixin
@@ -280,15 +281,13 @@ class CascadeRoIHead(BaseRoIHead, BBoxTestMixin, MaskTestMixin):
         img_shape = img_metas[0]['img_shape']
         ori_shape = img_metas[0]['ori_shape']
         scale_factor = img_metas[0]['scale_factor']
-        # from mmdet.integration.nncf.utils import no_nncf_trace
-        # with no_nncf_trace():
         # "ms" in variable names means multi-stage
         ms_bbox_result = {}
         ms_segm_result = {}
         ms_scores = []
         rcnn_test_cfg = self.test_cfg
-
-        rois = bbox2roi(proposal_list)
+        with no_nncf_trace():
+            rois = bbox2roi(proposal_list)
         for i in range(self.num_stages):
             bbox_results = self._bbox_forward(i, x, rois)
             ms_scores.append(bbox_results['cls_score'])
@@ -297,16 +296,16 @@ class CascadeRoIHead(BaseRoIHead, BBoxTestMixin, MaskTestMixin):
                 bbox_label = bbox_results['cls_score'].argmax(dim=1)
                 rois = self.bbox_head[i].regress_by_class(
                     rois, bbox_label, bbox_results['bbox_pred'], img_metas[0])
-
-        cls_score = sum(ms_scores) / self.num_stages
-        det_bboxes, det_labels = self.bbox_head[-1].get_bboxes(
-            rois,
-            cls_score,
-            bbox_results['bbox_pred'],
-            img_shape,
-            scale_factor,
-            rescale=False,
-            cfg=rcnn_test_cfg)
+        with no_nncf_trace():
+            cls_score = sum(ms_scores) / self.num_stages
+            det_bboxes, det_labels = self.bbox_head[-1].get_bboxes(
+                rois,
+                cls_score,
+                bbox_results['bbox_pred'],
+                img_shape,
+                scale_factor,
+                rescale=False,
+                cfg=rcnn_test_cfg)
 
         ms_bbox_result['ensemble'] = (det_bboxes, det_labels)
 
@@ -334,23 +333,25 @@ class CascadeRoIHead(BaseRoIHead, BBoxTestMixin, MaskTestMixin):
                     if self.with_shared_head:
                         mask_feats = self.shared_head(mask_feats)
                     mask_pred = self.mask_head[i](mask_feats)
-                    mask_pred = self.mask_head[i].get_seg_masks(mask_pred, det_bboxes, det_labels, rcnn_test_cfg,
-                      ori_shape, scale_factor, rescale)
+                    with no_nncf_trace():
+                        mask_pred = self.mask_head[i].get_seg_masks(mask_pred, det_bboxes, det_labels, rcnn_test_cfg,
+                          ori_shape, scale_factor, rescale)
                     aug_masks.append(mask_pred)
-                segm_result = merge_aug_masks(aug_masks,
-                                              [img_metas] * self.num_stages,
-                                              self.test_cfg)
+                with no_nncf_trace():
+                    segm_result = merge_aug_masks(aug_masks,
+                                                  [img_metas] * self.num_stages,
+                                                  self.test_cfg)
             ms_segm_result['ensemble'] = segm_result
-
-        if postprocess:
-            det_masks = ms_segm_result['ensemble'] if self.with_mask else None
-            results = self.postprocess(det_bboxes, det_labels, det_masks,
-                                       img_metas, rescale=rescale)
-        else:
-            if self.with_mask:
-                results = (*ms_bbox_result['ensemble'], ms_segm_result['ensemble'])
+        with no_nncf_trace():
+            if postprocess:
+                det_masks = ms_segm_result['ensemble'] if self.with_mask else None
+                results = self.postprocess(det_bboxes, det_labels, det_masks,
+                                           img_metas, rescale=rescale)
             else:
-                results = ms_bbox_result['ensemble']
+                if self.with_mask:
+                    results = (*ms_bbox_result['ensemble'], ms_segm_result['ensemble'])
+                else:
+                    results = ms_bbox_result['ensemble']
         return results
 
     def postprocess(self,

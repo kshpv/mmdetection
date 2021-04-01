@@ -1,6 +1,8 @@
 import sys
 
 from mmdet.core import merge_aug_proposals
+from mmdet.integration.nncf.utils import no_nncf_trace
+
 
 if sys.version_info >= (3, 7):
     from mmdet.utils.contextmanagers import completed
@@ -23,7 +25,6 @@ class RPNTestMixin(object):
 
     def simple_test_rpn(self, x, img_metas):
         rpn_outs = self(x)
-        from ...integration.nncf.utils import no_nncf_trace
         with no_nncf_trace():
             proposal_list = self.get_bboxes(*rpn_outs, img_metas)
         return proposal_list
