@@ -336,12 +336,13 @@ class CascadeRoIHead(BaseRoIHead, BBoxTestMixin, MaskTestMixin):
 
             if i < self.num_stages - 1:
                 bbox_label = [s[:, :-1].argmax(dim=1) for s in cls_score]
-                rois = torch.cat([
-                    self.bbox_head[i].regress_by_class(rois[j], bbox_label[j],
-                                                       bbox_pred[j],
-                                                       img_metas[j])
-                    for j in range(num_imgs)
-                ])
+                with no_nncf_trace():
+                    rois = torch.cat([
+                        self.bbox_head[i].regress_by_class(rois[j], bbox_label[j],
+                                                           bbox_pred[j],
+                                                           img_metas[j])
+                        for j in range(num_imgs)
+                    ])
         with no_nncf_trace():
         # average scores of each image by stages
             cls_score = [
