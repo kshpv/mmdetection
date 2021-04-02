@@ -294,8 +294,9 @@ class CascadeRoIHead(BaseRoIHead, BBoxTestMixin, MaskTestMixin):
 
             if i < self.num_stages - 1:
                 bbox_label = bbox_results['cls_score'].argmax(dim=1)
-                rois = self.bbox_head[i].regress_by_class(
-                    rois, bbox_label, bbox_results['bbox_pred'], img_metas[0])
+                with no_nncf_trace():
+                    rois = self.bbox_head[i].regress_by_class(
+                        rois, bbox_label, bbox_results['bbox_pred'], img_metas[0])
         with no_nncf_trace():
             cls_score = sum(ms_scores) / self.num_stages
             det_bboxes, det_labels = self.bbox_head[-1].get_bboxes(
