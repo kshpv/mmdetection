@@ -99,9 +99,9 @@ class SingleStageDetector(BaseDetector):
             det_bboxes, det_labels = \
                 self.bbox_head.get_bboxes(*outs, img_metas, self.test_cfg, False)[0]
 
-        if postprocess:
-            return self.postprocess(det_bboxes, det_labels, None, img_metas,
-                                    rescale=rescale)
+            if postprocess:
+                return self.postprocess(det_bboxes, det_labels, None, img_metas,
+                                        rescale=rescale)
         return det_bboxes, det_labels
 
     def postprocess(self,
