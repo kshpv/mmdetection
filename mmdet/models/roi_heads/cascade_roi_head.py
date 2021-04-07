@@ -306,8 +306,7 @@ class CascadeRoIHead(BaseRoIHead, BBoxTestMixin, MaskTestMixin):
         ms_segm_result = {}
         ms_scores = []
         rcnn_test_cfg = self.test_cfg
-        with no_nncf_trace():
-            rois = bbox2roi(proposal_list)
+        rois = bbox2roi(proposal_list)
         for i in range(self.num_stages):
             bbox_results = self._bbox_forward(i, x, rois)
 
