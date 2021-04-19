@@ -71,8 +71,8 @@ def multiclass_nms_core(multi_bboxes, multi_scores, score_thr, nms_cfg, max_num=
         nms_cfg['score_thr'] = score_thr
         nms_cfg['max_num'] = max_num if max_num > 0 else sys.maxsize
     else:
-
-        valid_mask = scores > score_thr
+        with no_nncf_trace():
+            valid_mask = scores > score_thr
         bboxes = bboxes[valid_mask]
         scores = scores[valid_mask]
         labels = valid_mask.nonzero()[:, 1]
