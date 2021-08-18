@@ -15,8 +15,7 @@ class CompressionHook(Hook):
 
     def before_run(self, runner):
         if runner.rank == 0:
-            statistics = self.compression_ctrl.statistics()
-            runner.logger.info(statistics.to_str())
+            runner.logger.info(self.compression_ctrl.statistics().to_str())
 
 
 @HOOKS.register_module()

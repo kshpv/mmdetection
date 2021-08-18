@@ -39,7 +39,7 @@ def load_checkpoint(model, filename, map_location=None, strict=False):
     Returns:
         dict or OrderedDict: The loaded checkpoint.
     """
-    from nncf import load_state
+    from nncf.torch import load_state
 
     checkpoint = torch.load(filename, map_location=map_location)
     # get state_dict from checkpoint
