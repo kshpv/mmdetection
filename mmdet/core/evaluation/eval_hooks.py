@@ -312,8 +312,25 @@ class EvalPlusBeforeRunHook(EvalHook):
         results = single_gpu_test(runner.model, self.dataloader, show=False)
         self.evaluate(runner, results)
 
+    # Used for Accuracy-Aware training
+    def evaluate(self, runner, results):
+        eval_res = self.dataloader.dataset.evaluate(
+            results, logger=runner.logger, **self.eval_kwargs)
+        runner.eval_res = {}
+        for name, val in eval_res.items():
+            runner.log_buffer.output[name] = val
+            runner.eval_res[name] = val
+        runner.log_buffer.ready = True
+        if self.save_best is not None:
+            if self.key_indicator == 'auto':
+                # infer from eval_results
+                self._init_rule(self.rule, list(eval_res.keys())[0])
+            return eval_res[self.key_indicator]
+        else:
+            return None
 
-class DistEvalPlusBeforeRunHook(DistEvalHook):
+
+class DistEvalPlusBeforeRunHook(EvalPlusBeforeRunHook):
     """Distributed evaluation hook, adds evaluation before training.
     """
 

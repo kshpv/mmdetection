@@ -136,7 +136,8 @@ def train_detector(model,
         compression_ctrl, model = wrap_nncf_model(model, cfg,
                                                   val_dataloader=val_dataloader,
                                                   dataloader_for_init=dataloader_for_init,
-                                                  get_fake_input_func=get_fake_input)
+                                                  get_fake_input_func=get_fake_input,
+                                                  is_accuracy_aware=is_acc_aware_training_set)
 
     model = prepare_mmdet_model_for_execution(model, cfg, distributed)
 

@@ -84,6 +84,7 @@ def wrap_nncf_model(model,
                     val_dataloader=None,
                     dataloader_for_init=None,
                     get_fake_input_func=None,
+                    is_accuracy_aware=False,
                     is_alt_ssd_export=False):
     """
     The function wraps mmdet model by NNCF
@@ -101,11 +102,6 @@ def wrap_nncf_model(model,
     from nncf.torch.dynamic_graph.trace_tensor import TracedTensor
     from nncf.torch.initialization import PTInitializingDataLoader
 
-    from nncf.torch.dynamic_graph.io_handling import nncf_model_input
-    from nncf.torch.dynamic_graph.io_handling import wrap_nncf_model_outputs_with_objwalk
-    from nncf.torch.dynamic_graph.trace_tensor import TracedTensor
-    from nncf.torch.initialization import PTInitializingDataLoader
-
     class MMInitializeDataLoader(PTInitializingDataLoader):
         def get_inputs(self, dataloader_output):
             # redefined PTInitializingDataLoader because
@@ -117,7 +113,6 @@ def wrap_nncf_model(model,
 
     pathlib.Path(cfg.work_dir).mkdir(parents=True, exist_ok=True)
     nncf_config = NNCFConfig(cfg.nncf_config)
-    nncf_config.target_metric_name = cfg.nncf_config.target_metric_name
     logger = get_root_logger(cfg.log_level)
 
     def model_eval_fn(model):
@@ -132,20 +127,31 @@ def wrap_nncf_model(model,
             raise RuntimeError('Cannot perform model evaluation on the validation '
                                'dataset since the validation data loader was not passed '
                                'to wrap_nncf_model')
-        model = prepare_mmdet_model_for_execution(model, cfg)
-        results = single_gpu_test(model, val_dataloader, show=False)
+        from functools import partial
+
+        forward_backup = model.forward
+        model_forward = type(model).forward
+        model.forward = model_forward.__get__(model)
+        model.forward = partial(model.forward, return_loss=False)
+
+        prepared_model = prepare_mmdet_model_for_execution(model, cfg)
+        results = single_gpu_test(prepared_model, val_dataloader, show=False)
         eval_res = val_dataloader.dataset.evaluate(results)
-        metric_name = nncf_config.target_metric_name
+
+        metric_name = nncf_config.get('target_metric_name', 'bbox_mAP')
         if metric_name not in eval_res:
             raise RuntimeError(f'Cannot find {metric_name} metric in '
                                 'the evaluation result dict')
+
+        model.forward = forward_backup
         return eval_res[metric_name]
 
     wrapped_loader = None
     if dataloader_for_init:
         wrapped_loader = MMInitializeDataLoader(dataloader_for_init)
+    eval_fn = model_eval_fn if is_accuracy_aware else None
     nncf_config = register_default_init_args(nncf_config, wrapped_loader,
-                                             model_eval_fn=model_eval_fn,
+                                             model_eval_fn=eval_fn,
                                              device=next(model.parameters()).device)
 
     if cfg.get('resume_from'):
