@@ -41,8 +41,7 @@ def prepare_mmdet_model_for_execution(model, cfg, distributed=False):
                 broadcast_buffers=False,
                 find_unused_parameters=find_unused_parameters)
         else:
-            model = MMDataParallel(
-                model.cuda(cfg.gpu_ids[0]), device_ids=cfg.gpu_ids)
+            model = MMDataParallel(model, device_ids=[0])
     else:
         model = MMDataCPU(model)
     return model

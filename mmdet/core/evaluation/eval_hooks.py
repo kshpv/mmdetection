@@ -330,7 +330,7 @@ class EvalPlusBeforeRunHook(EvalHook):
             return None
 
 
-class DistEvalPlusBeforeRunHook(EvalPlusBeforeRunHook):
+class DistEvalPlusBeforeRunHook(EvalPlusBeforeRunHook, DistEvalHook):
     """Distributed evaluation hook, adds evaluation before training.
     """
 

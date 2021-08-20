@@ -81,6 +81,7 @@ def get_nncf_config_from_meta(path):
 
 def wrap_nncf_model(model,
                     cfg,
+                    distributed=False,
                     val_dataloader=None,
                     dataloader_for_init=None,
                     get_fake_input_func=None,
@@ -122,29 +123,43 @@ def wrap_nncf_model(model,
         Used to evaluate the original model before compression
         if NNCF-based accuracy-aware training is used.
         """
-        from mmdet.apis import single_gpu_test
         if val_dataloader is None:
             raise RuntimeError('Cannot perform model evaluation on the validation '
                                'dataset since the validation data loader was not passed '
                                'to wrap_nncf_model')
+        from mmdet.apis import single_gpu_test, multi_gpu_test
         from functools import partial
 
+        metric_name = nncf_config.get('target_metric_name', 'bbox_mAP')
         forward_backup = model.forward
         model_forward = type(model).forward
         model.forward = model_forward.__get__(model)
         model.forward = partial(model.forward, return_loss=False)
+        prepared_model = prepare_mmdet_model_for_execution(model, cfg, distributed)
 
-        prepared_model = prepare_mmdet_model_for_execution(model, cfg)
-        results = single_gpu_test(prepared_model, val_dataloader, show=False)
-        eval_res = val_dataloader.dataset.evaluate(results)
+        if distributed:
+            dist_eval_res = [None]
+            results = multi_gpu_test(prepared_model, val_dataloader, gpu_collect=True, broadcast=True)
+            if torch.distributed.get_rank() == 0:
+                eval_res = val_dataloader.dataset.evaluate(results)
+                if metric_name not in eval_res:
+                    raise RuntimeError(f'Cannot find {metric_name} metric in '
+                                       'the evaluation result dict')
+                dist_eval_res[0] = eval_res
 
-        metric_name = nncf_config.get('target_metric_name', 'bbox_mAP')
-        if metric_name not in eval_res:
-            raise RuntimeError(f'Cannot find {metric_name} metric in '
-                                'the evaluation result dict')
+            torch.distributed.broadcast_object_list(dist_eval_res, src=0)
+            model.forward = forward_backup
+            return dist_eval_res[0][metric_name]
+        else:
+            results = single_gpu_test(model, val_dataloader, show=False)
+            eval_res = val_dataloader.dataset.evaluate(results)
 
-        model.forward = forward_backup
-        return eval_res[metric_name]
+            if metric_name not in eval_res:
+                raise RuntimeError(f'Cannot find {metric_name} metric in '
+                                   'the evaluation result dict')
+
+            model.forward = forward_backup
+            return eval_res[metric_name]
 
     wrapped_loader = None
     if dataloader_for_init:
@@ -222,7 +237,6 @@ def wrap_nncf_model(model,
             logger.debug(f"NNCF will NOT compress a postprocessing part of the model")
         with ctx:
             wrap_nncf_model_outputs_with_objwalk(model(img))
-
 
     def wrap_inputs(args, kwargs):
         # during dummy_forward
