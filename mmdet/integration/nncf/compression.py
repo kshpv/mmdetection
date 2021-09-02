@@ -137,9 +137,11 @@ def wrap_nncf_model(model,
         model.forward = partial(model.forward, return_loss=False)
         prepared_model = prepare_mmdet_model_for_execution(model, cfg, distributed)
 
+        logger.info(f'Calculating an original model accuracy')
+
         if distributed:
             dist_eval_res = [None]
-            results = multi_gpu_test(prepared_model, val_dataloader, gpu_collect=True, broadcast=True)
+            results = multi_gpu_test(prepared_model, val_dataloader, gpu_collect=True)
             if torch.distributed.get_rank() == 0:
                 eval_res = val_dataloader.dataset.evaluate(results)
                 if metric_name not in eval_res:
@@ -151,7 +153,7 @@ def wrap_nncf_model(model,
             model.forward = forward_backup
             return dist_eval_res[0][metric_name]
         else:
-            results = single_gpu_test(model, val_dataloader, show=False)
+            results = single_gpu_test(prepared_model, val_dataloader, show=False)
             eval_res = val_dataloader.dataset.evaluate(results)
 
             if metric_name not in eval_res:

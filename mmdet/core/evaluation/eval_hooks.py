@@ -479,12 +479,57 @@ class DistEvalPlusBeforeRunHook(EvalPlusBeforeRunHook, DistEvalHook):
     """
 
     def before_run(self, runner):
+        self._do_evaluate(runner)
+
+    def _do_evaluate(self, runner):
+        """perform evaluation and save ckpt."""
+        # Synchronization of BatchNorm's buffer (running_mean
+        # and running_var) is not supported in the DDP of pytorch,
+        # which may cause the inconsistent performance of models in
+        # different ranks, so we broadcast BatchNorm's buffers
+        # of rank 0 to other ranks to avoid this.
+        if self.broadcast_bn_buffer:
+            model = runner.model
+            for name, module in model.named_modules():
+                if isinstance(module,
+                              _BatchNorm) and module.track_running_stats:
+                    dist.broadcast(module.running_var, 0)
+                    dist.broadcast(module.running_mean, 0)
+
+        if not self._should_evaluate(runner):
+            return
+
+        tmpdir = self.tmpdir
+        if tmpdir is None:
+            tmpdir = osp.join(runner.work_dir, '.eval_hook')
+
         from mmdet.apis import multi_gpu_test
         results = multi_gpu_test(
             runner.model,
             self.dataloader,
-            tmpdir=osp.join(runner.work_dir, '.eval_hook'),
+            tmpdir=tmpdir,
             gpu_collect=self.gpu_collect)
+        broadcast_data = None
+        broadcast_eval_res = None
         if runner.rank == 0:
             print('\n')
-            self.evaluate(runner, results)
+            runner.log_buffer.output['eval_iter_num'] = len(self.dataloader)
+            key_score = self.evaluate(runner, results)
+            broadcast_eval_res = runner.eval_res
+            # TODO: Log is cleared in Logger.after_train_iter before ReduceOnPlateau could get the metric
+            for name, val in runner.log_buffer.output.items():
+                setattr(runner, name, val)
+            if self.save_best:
+                self._save_ckpt(runner, key_score)
+                if self.save_best == 'auto':
+                    broadcast_data = runner.log_buffer.output[
+                        self.key_indicator]
+                else:
+                    broadcast_data = runner.log_buffer.output[self.save_best]
+
+        eval_res = self.broadcast(broadcast_eval_res)
+        score = self.broadcast(broadcast_data)
+        if runner.rank != 0 and self.save_best:
+            setattr(runner, self.save_best, score)
+        if runner.rank != 0:
+            runner.eval_res = eval_res
