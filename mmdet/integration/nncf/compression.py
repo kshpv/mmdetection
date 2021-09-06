@@ -163,13 +163,12 @@ def wrap_nncf_model(model,
             model.forward = forward_backup
             return eval_res[metric_name]
 
-    wrapped_loader = None
     if dataloader_for_init:
         wrapped_loader = MMInitializeDataLoader(dataloader_for_init)
-    eval_fn = model_eval_fn if is_accuracy_aware else None
-    nncf_config = register_default_init_args(nncf_config, wrapped_loader,
-                                             model_eval_fn=eval_fn,
-                                             device=next(model.parameters()).device)
+        eval_fn = model_eval_fn if is_accuracy_aware else None
+        nncf_config = register_default_init_args(nncf_config, wrapped_loader,
+                                                 model_eval_fn=eval_fn,
+                                                 device=next(model.parameters()).device)
 
     if cfg.get('resume_from'):
         checkpoint_path = cfg.get('resume_from')
@@ -225,6 +224,7 @@ def wrap_nncf_model(model,
             return get_fake_input_func(cfg, orig_img_shape=tuple([H, W, C]), device=device)
 
     def dummy_forward(model):
+        from nncf.torch.nncf_network import NNCFNetwork
         fake_data = _get_fake_data_for_forward(cfg, nncf_config, get_fake_input_func)
         img, img_metas = fake_data["img"], fake_data["img_metas"]
         img[0] = nncf_model_input(img[0])
@@ -233,6 +233,8 @@ def wrap_nncf_model(model,
                 img = img[0]
                 img_metas = img_metas[0]
             ctx = model.forward_export_context(img_metas)
+            if isinstance(model, NNCFNetwork):
+                model.get_nncf_wrapped_model().img_metas = img_metas
             logger.debug(f"NNCF will compress a postprocessing part of the model")
         else:
             ctx = model.forward_dummy_context(img_metas)
@@ -271,6 +273,7 @@ def wrap_nncf_model(model,
 
     model.dummy_forward_fn = dummy_forward
     export_method = type(model).export
+    # train_step_method = type(model).train_step
 
     if 'log_dir' in nncf_config:
         os.makedirs(nncf_config['log_dir'], exist_ok=True)
@@ -281,6 +284,7 @@ def wrap_nncf_model(model,
                                                           wrap_inputs_fn=wrap_inputs,
                                                           compression_state=compression_state)
     model.export = export_method.__get__(model)
+    # model.train_step = train_step_method.__get__(model)
 
     return compression_ctrl, model
 
