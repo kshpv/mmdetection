@@ -99,7 +99,6 @@ def wrap_nncf_model(model,
     from nncf.torch import create_compressed_model
     from nncf.torch import register_default_init_args
     from nncf.torch.dynamic_graph.io_handling import nncf_model_input
-    from nncf.torch.dynamic_graph.io_handling import wrap_nncf_model_outputs_with_objwalk
     from nncf.torch.dynamic_graph.trace_tensor import TracedTensor
     from nncf.torch.initialization import PTInitializingDataLoader
 
@@ -222,7 +221,6 @@ def wrap_nncf_model(model,
             return get_fake_input_func(cfg, orig_img_shape=tuple([H, W, C]), device=device)
 
     def dummy_forward(model):
-        from nncf.torch.nncf_network import NNCFNetwork
         fake_data = _get_fake_data_for_forward(cfg, nncf_config, get_fake_input_func)
         img, img_metas = fake_data["img"], fake_data["img_metas"]
         img[0] = nncf_model_input(img[0])
@@ -231,8 +229,6 @@ def wrap_nncf_model(model,
                 img = img[0]
                 img_metas = img_metas[0]
             ctx = model.forward_export_context(img_metas)
-            if isinstance(model, NNCFNetwork):
-                model.get_nncf_wrapped_model().img_metas = img_metas
             logger.debug(f"NNCF will compress a postprocessing part of the model")
         else:
             ctx = model.forward_dummy_context(img_metas)
