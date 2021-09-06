@@ -123,15 +123,7 @@ def train_detector(model,
     is_acc_aware_training_set = is_accuracy_aware_training_set(nncf_config)
     nncf_enable_compression = bool(cfg.get('nncf_config'))
     if nncf_enable_compression:
-        dataloader_for_init = build_dataloader(
-            dataset[0],
-            1,
-            cfg.data.workers_per_gpu,
-            # cfg.gpus will be ignored if distributed
-            len(cfg.gpu_ids),
-            dist=distributed,
-            seed=cfg.seed
-        )
+        dataloader_for_init = data_loaders[0]
         compression_ctrl, model = wrap_nncf_model(model, cfg,
                                                   distributed=distributed,
                                                   val_dataloader=val_dataloader,
