@@ -45,7 +45,8 @@ class AccuracyAwareRunner(EpochBasedRunner):
         model = acc_aware_training_loop.run(self.model,
                                             train_epoch_fn=self.train_fn,
                                             validate_fn=self.validation_fn,
-                                            configure_optimizers_fn=configure_optimizers_fn)
+                                            configure_optimizers_fn=configure_optimizers_fn,
+                                            dump_checkpoint_fn=self.dumping_fn)
 
         time.sleep(1)  # wait for some hooks like loggers to finish
         self.call_hook('after_run')
@@ -69,3 +70,7 @@ class AccuracyAwareRunner(EpochBasedRunner):
                 raise RuntimeError(f'Could not find the {self.target_metric_name} key in the '
                                    'log buffer to get the pre-computed metric value')
         return self.eval_res[self.target_metric_name]
+
+    def dumping_fn(self, model, dir, accuracy_aware_metainfo):
+        print(f'DUMPING CHECKPOINT IN THE DIR={self.work_dir}')
+        return self.save_checkpoint(self.work_dir, meta=accuracy_aware_metainfo)
