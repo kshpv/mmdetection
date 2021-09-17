@@ -72,5 +72,4 @@ class AccuracyAwareRunner(EpochBasedRunner):
         return self.eval_res[self.target_metric_name]
 
     def dumping_fn(self, model, dir, accuracy_aware_metainfo):
-        print(f'DUMPING CHECKPOINT IN THE DIR={self.work_dir}')
         return self.save_checkpoint(self.work_dir, meta=accuracy_aware_metainfo)

@@ -1,3 +1,4 @@
+import os
 import importlib
 from collections import OrderedDict
 from contextlib import contextmanager
@@ -5,7 +6,6 @@ from contextlib import contextmanager
 import torch
 
 from mmdet.utils import get_root_logger
-
 
 _is_nncf_enabled = importlib.util.find_spec('nncf') is not None
 
@@ -98,3 +98,42 @@ def is_accuracy_aware_training_set(nncf_config):
                            'found in the NNCF config - proceeding with the default "bbox_mAP"')
             nncf_config.target_metric_name = 'bbox_mAP'
     return is_acc_aware_training_set
+
+
+def is_lazy_initialization_quantization(cfg):
+    if not is_nncf_enabled():
+        return False
+    return cfg.get('lazy_initialization_quantization', False)
+
+
+def add_checkpoint_reference_to_config(cfg, work_dir):
+    def get_latest_checkpoint_path():
+        checkpoint_path = os.path.join(work_dir, 'latest.pth')
+
+    latest_checkpoint_path = get_latest_checkpoint_path()
+    if os.path.exists(latest_checkpoint_path):
+        cfg['load_from'] = latest_checkpoint_path
+    else:
+        raise RuntimeError('Can not find the latest checkpoint')
+
+
+def remove_quantization_from_config(nncf_config):
+    from nncf.config.extractors import extract_algorithm_names
+    from nncf.config.extractors import extract_algo_specific_config
+
+    algos = extract_algorithm_names(nncf_config)
+    quantization_name = 'quantization'
+    if quantization_name in algos:
+        saved_quantization_config = extract_algo_specific_config(nncf_config, quantization_name)
+    else:
+        raise RuntimeError(f'There is no {quantization_name} config')
+    for i in range(len(nncf_config['compression'])):
+        if nncf_config['compression'][i]['algorithm'] == quantization_name:
+            nncf_config['compression'].pop(i)
+    return nncf_config, saved_quantization_config
+
+
+def restore_quantization_to_config(nncf_config, quantization_config):
+    assert isinstance(nncf_config['compression'], list)
+    nncf_config['compression'].append(quantization_config)
+    return nncf_config

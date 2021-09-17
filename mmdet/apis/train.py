@@ -14,6 +14,10 @@ from mmdet.integration.nncf import CheckpointHookBeforeTraining
 from mmdet.integration.nncf import wrap_nncf_model
 from mmdet.integration.nncf import AccuracyAwareRunner
 from mmdet.integration.nncf import is_accuracy_aware_training_set
+from mmdet.integration.nncf import is_lazy_initialization_quantization
+from mmdet.integration.nncf import remove_quantization_from_config
+from mmdet.integration.nncf import restore_quantization_to_config
+from mmdet.integration.nncf import add_checkpoint_reference_to_config
 from mmcv.utils import build_from_cfg
 
 from mmdet.datasets import (build_dataloader, build_dataset,
@@ -122,14 +126,28 @@ def train_detector(model,
     nncf_config = cfg.get('nncf_config')
     is_acc_aware_training_set = is_accuracy_aware_training_set(nncf_config)
     nncf_enable_compression = bool(cfg.get('nncf_config'))
+    lazy_initialization_quantization = is_lazy_initialization_quantization(cfg)
+    print (f'lazy_initialization_quantization = {lazy_initialization_quantization}')
     if nncf_enable_compression:
         dataloader_for_init = data_loaders[0]
-        compression_ctrl, model = wrap_nncf_model(model, cfg,
-                                                  distributed=distributed,
-                                                  val_dataloader=val_dataloader,
-                                                  dataloader_for_init=dataloader_for_init,
-                                                  get_fake_input_func=get_fake_input,
-                                                  is_accuracy_aware=is_acc_aware_training_set)
+        if lazy_initialization_quantization:
+            nncf_config, saved_quantization_config = remove_quantization_from_config(nncf_config)
+            from copy import deepcopy
+            original_model = deepcopy(model)
+            compression_ctrl, model = wrap_nncf_model(model, cfg,
+                                                      distributed=distributed,
+                                                      val_dataloader=val_dataloader,
+                                                      dataloader_for_init=dataloader_for_init,
+                                                      get_fake_input_func=get_fake_input,
+                                                      is_accuracy_aware=is_acc_aware_training_set)
+            nncf_config = restore_quantization_to_config(nncf_config, saved_quantization_config)
+        else:
+            compression_ctrl, model = wrap_nncf_model(model, cfg,
+                                                      distributed=distributed,
+                                                      val_dataloader=val_dataloader,
+                                                      dataloader_for_init=dataloader_for_init,
+                                                      get_fake_input_func=get_fake_input,
+                                                      is_accuracy_aware=is_acc_aware_training_set)
 
     model = prepare_mmdet_model_for_execution(model, cfg, distributed)
 
@@ -217,7 +235,28 @@ def train_detector(model,
         optimizer = build_optimizer(runner.model, cfg.optimizer)
         return optimizer, None
 
-    runner.run(data_loaders, cfg.workflow,
-               compression_ctrl=compression_ctrl,
-               configure_optimizers_fn=configure_optimizers_fn,
-               nncf_config=nncf_config)
+    if lazy_initialization_quantization:
+        runner.run(data_loaders, cfg.workflow,
+                   compression_ctrl=compression_ctrl,
+                   configure_optimizers_fn=configure_optimizers_fn,
+                   nncf_config=nncf_config)
+
+        checkpoint_path = runner.work_dir
+        add_checkpoint_reference_to_config(cfg, checkpoint_path)
+
+        compression_ctrl, model = wrap_nncf_model(original_model, cfg,
+                                                  distributed=distributed,
+                                                  val_dataloader=val_dataloader,
+                                                  dataloader_for_init=dataloader_for_init,
+                                                  get_fake_input_func=get_fake_input,
+                                                  is_accuracy_aware=is_acc_aware_training_set)
+
+        runner.run(data_loaders, cfg.workflow,
+                   compression_ctrl=compression_ctrl,
+                   configure_optimizers_fn=configure_optimizers_fn,
+                   nncf_config=nncf_config)
+    else:
+        runner.run(data_loaders, cfg.workflow,
+                   compression_ctrl=compression_ctrl,
+                   configure_optimizers_fn=configure_optimizers_fn,
+                   nncf_config=nncf_config)
